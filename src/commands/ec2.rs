@@ -86,14 +86,28 @@ impl Tabled for EC2TabledInstance {
     fn fields(&self) -> Vec<Cow<'_, str>> {
         let mut vec: Vec<Cow<str>> = Vec::new();
         vec.push(Cow::from(self.instance.instance_id.as_ref().unwrap()));
-        vec.push(Cow::from(find_tag_value(self.instance.tags.as_ref().unwrap(), "Name")));
+
+        // Try to find a name for this instance
+
+        let name = match (find_tag_value(self.instance.tags.as_ref().unwrap(), "Name")) {
+            Some(string) => string,
+            None => match (find_tag_value(self.instance.tags.as_ref().unwrap(), "aws:eks:cluster-name")) {
+                Some(string) => format!("[EKS] {}", string),
+                None => "Untitled".to_string()
+            }
+        };
+
+        vec.push(Cow::from(name));
         vec.push(Cow::from(self.instance.state().as_ref().unwrap().name().unwrap().as_str()));
+
+        // IP addresses may not be assigned
         vec.push(Cow::from(
             match self.instance.public_ip_address.as_ref() {
                 Some(address) => address,
                 None => "None"
             }
         ));
+
         vec.push(Cow::from(
             match self.instance.private_ip_address.as_ref() {
                 Some(address) => address,
@@ -111,16 +125,17 @@ impl Tabled for EC2TabledInstance {
         vec.push(Cow::from("State"));
         vec.push(Cow::from("Public IP"));
         vec.push(Cow::from("Private IP"));
+
         vec
     }
 }
 
-fn find_tag_value(tags: &Vec<aws_sdk_ec2::model::Tag>, key: &str) -> String {
+fn find_tag_value(tags: &Vec<aws_sdk_ec2::model::Tag>, key: &str) -> Option<String> {
     for tag in tags {
         if tag.key().unwrap() == key {
-            return tag.value().unwrap().to_string();
+            return Some(tag.value().unwrap().to_string());
         }
     }
 
-    return "Not Found".to_string();
+    None
 }
