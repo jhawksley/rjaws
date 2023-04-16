@@ -1,11 +1,10 @@
 // https://awslabs.github.io/aws-sdk-rust/
 
-use std::borrow::Cow;
-use std::fmt::{Debug, Formatter};
 use aws_sdk_sts;
 use aws_sdk_sts::output::GetCallerIdentityOutput;
 use aws_sdk_ec2;
 use aws_sdk_ec2::model::Instance;
+use tracing::log::Level::Info;
 
 use crate::error::jaws_error::JawsError;
 
@@ -30,10 +29,11 @@ pub async fn sts_get_caller_identity() -> Result<GetCallerIdentityOutput, JawsEr
 // ***********************************************************************************************
 
 
-pub async fn ec2_get_all() -> Result<Vec<Instance>, JawsError> {
+pub async fn ec2_get_all() -> Result<Vec<Instance>, JawsError>
+{
     let mut instances: Vec<Instance> = Vec::new();
 
-    let client = aws_sdk_ec2::Client::new(&aws_config::load_from_env().await);
+    let client: aws_sdk_ec2::Client = aws_sdk_ec2::Client::new(&aws_config::load_from_env().await);
 
     let resp_result = client
         .describe_instances()
@@ -42,15 +42,21 @@ pub async fn ec2_get_all() -> Result<Vec<Instance>, JawsError> {
 
     match resp_result {
         Ok(resp) => {
-            'res: for reservation in resp.reservations().unwrap_or_default() {
-                for instance in reservation.instances().unwrap_or_default() {
+            for reservation in resp.reservations().unwrap_or_default() {
+                let list: &[aws_sdk_ec2::model::Instance] = reservation.instances().unwrap_or_default();
+                for instance in list {
                     // println!("{:?}", instance);
-                    instances.push( instance.to_owned() );
+                    instances.push(instance.to_owned());
                 }
             }
 
             Ok(instances)
-        },
+        }
         Err(error) => Err(JawsError::new(format!("{}", error)))
     }
+}
+
+pub fn instance_can_ssm(id: &str) -> bool
+{
+    false
 }
