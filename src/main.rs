@@ -2,12 +2,16 @@ use clap::Parser;
 use std::process;
 use colored::*;
 
-use crate::commands::command::Command;
-use crate::error::jaws_error::JawsError;
+use crate::commands::Command;
+use crate::errors::jaws_error::JawsError;
+use crate::textutils::txt_line_output;
 
-mod commands;
 mod aws_handler;
-mod error;
+mod errors;
+mod commands;
+mod models;
+mod tabulatable;
+mod textutils;
 
 #[derive(Parser, Debug)]
 #[clap(author, version, about, long_about = None)]
@@ -35,7 +39,9 @@ enum SubCommands {
     },
 
     /// Translate an instance ID to its public IP address (if available)
-    TR,
+    TR {
+        instance_id: String,
+    },
 
     /// Gets the caller identity from the Security Token Service
     GCI,
@@ -45,19 +51,25 @@ enum SubCommands {
 // Main: starts here. We need tokio because the AWS libraries need it.
 #[tokio::main]
 async fn main() {
+
+    txt_line_output("RJaws - getting started...".to_string());
+
     // Parse options
     let options = Options::parse();
 
-    // Switch based on the selected subcommand.
+    // Switch based on the selected subcommand
 
-    let command: Option<&dyn Command> = match &options.subcommand {
-        SubCommands::EC2 => Some(&commands::ec2::EC2Command {} as &dyn Command),
-        SubCommands::GCI => Some(&commands::gci::GCICommand {} as &dyn Command),
+    let command: Option<Box<dyn Command>> = match &options.subcommand {
+        SubCommands::EC2 => {
+            let c = commands::ec2::EC2Command::new();
+            Some(Box::new(c ) )
+        },
+        SubCommands::GCI => Some(Box::new(commands::gci::GCICommand )),
         _ => None
     };
 
     match command {
-        Some(c) => {
+        Some(mut c ) => {
             match c.run(&options).await {
                 Ok(_) => {} // Success - command ran to completion
                 Err(e) => handle_and_abort(e)
@@ -68,8 +80,10 @@ async fn main() {
 }
 
 fn handle_and_abort(error: JawsError) {
+    textutils::txt_line_clear();
+
     println!("{}\n\n{}\n", "*** ABORT ***".red().bold().underline(),
-        "Software aborted with the following error:".red());
+             "Software aborted with the following error:".red());
     println!("{}", error.to_string().red());
     process::exit(1);
 }

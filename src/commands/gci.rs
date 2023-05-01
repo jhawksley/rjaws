@@ -1,8 +1,8 @@
 use async_trait::async_trait;
 
 use crate::aws_handler;
-use crate::commands::command::Command;
-use crate::error::jaws_error::JawsError;
+use crate::commands::{Command, notify_clear, notify_comms};
+use crate::errors::jaws_error::JawsError;
 use crate::Options;
 
 pub struct GCICommand;
@@ -10,9 +10,13 @@ pub struct GCICommand;
 #[async_trait]
 impl Command for GCICommand
 {
-    async fn run(&self, _options: &Options) -> Result<(), JawsError> {
+    async fn run(&mut self, _options: &Options) -> Result<(), JawsError> {
+
+        notify_comms(None);
         let id = aws_handler::sts_get_caller_identity();
         let identity_result = id.await;
+
+        notify_clear();
 
         match identity_result {
             Ok(identity) => {

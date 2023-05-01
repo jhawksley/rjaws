@@ -1,28 +1,51 @@
-use std::borrow::Cow;
-use std::ptr::null;
-use crate::commands::command::Command;
-use crate::error::jaws_error::JawsError;
-use crate::{aws_handler, Options};
-use async_trait::async_trait;
-use tabled::{Tabled, Table, Style};
-use aws_sdk_ec2::model::Instance;
+use std::collections::HashMap;
 
-pub struct EC2Command;
+use async_trait::async_trait;
+use aws_sdk_ec2::types::{Instance};
+use aws_sdk_iam::types::InstanceProfile;
+
+use crate::{aws_handler, Options};
+use crate::aws_handler::{generate_spec_map};
+use crate::commands::{Command, notify_clear, notify_comms, notify_working};
+use crate::errors::jaws_error::JawsError;
+use crate::models::ec2_instance::EC2Instance;
+use crate::tabulatable::Tabulatable;
+use crate::textutils::txt_line_output;
+
+pub struct EC2Command {
+    instances: Vec<EC2Instance>,
+}
+
+impl EC2Command {
+    pub fn new() -> Self {
+        Self {
+            instances: Vec::new()
+        }
+    }
+}
 
 #[async_trait]
 impl Command for EC2Command {
-    async fn run(&self, options: &Options) -> Result<(), JawsError> {
+    async fn run(&mut self, options: &Options) -> Result<(), JawsError> {
+        // Update the user we're talking to AWS
+        notify_comms(Some("checking caller ID".to_string()));
 
         // Assert we can actually log in.
         aws_handler::sts_get_caller_identity().await?;
 
+        notify_comms(Some("getting instances".to_string()));
         // Get all EC2 instances and run them through Tabled for output
         match aws_handler::ec2_get_all().await {
             Ok(instances) => {
                 if instances.len() == 0 {
-                    println!("No instances found.");
+                    txt_line_output("No instances found.".to_string());
                 } else {
-                    EC2Command::instance_tabulator(instances, options.wide);
+                    // Convert the AWS instances to our own type
+                    notify_working();
+                    self.instances = to_ec2instances(instances, options.wide).await;
+                    self.instances.sort_by_key(|i| i.get_name());
+                    notify_clear();
+                    (self as &dyn Tabulatable).tabulate(options.wide);
                 }
                 Ok(())
             }
@@ -31,150 +54,85 @@ impl Command for EC2Command {
     }
 }
 
-
-impl EC2Command {
-    fn instance_tabulator(instances: Vec<Instance>, wide: bool) {
-        // Take the passed instances and create Tabled Instances out of them
-        let mut tabled_instances = to_tabled(instances, wide);
-
-        // Sort instances by name (case insensitive)
-        tabled_instances.sort_unstable_by_key(|i| i.get_name().to_lowercase());
-
-        // Print the table
-        println!("{}", Table::new(tabled_instances).with(Style::rounded()).to_string());
-        // panic!(); // Mr Mainwaring!
-    }
-}
-
 /// Convert a vector of AWS SDK EC2 instances into a vector of
 /// Tabled (printable) instances.  If the `wide` option is in force,
 /// additional API calls are made to fill out the enhanced fields.
-fn to_tabled(instances: Vec<Instance>, extended: bool) -> Vec<EC2TabledInstance> {
-    let mut vec: Vec<EC2TabledInstance> = Vec::new();
+async fn to_ec2instances(instances: Vec<Instance>, extended: bool) -> Vec<EC2Instance> {
+    let mut vec: Vec<EC2Instance> = Vec::new();
+
+    let mut specmap: Option<HashMap<String, String>> = None;
+
+    if extended {
+        specmap = Some(generate_spec_map().await);
+    }
+
+    let mut instance_profile_cache: HashMap<String, InstanceProfile> = HashMap::new();
+    let mut instance_ssm_cache: HashMap<String, bool> = HashMap::new();
 
     for instance in instances {
+        // Only gather Wide data if wide is enabled.  Otherwise it will waste time unnecessarily.
+
+        let mut ssm = None;
+        let mut az = None;
+        let mut instance_type = None;
+        let mut spec = None;
+
         if extended {
-            // Only gather Wide data if wide is enabled.  Otherwise it will waste time unnecessarily.
+            ssm = if aws_handler::instance_can_ssm(&instance, &mut instance_profile_cache,
+                                                   &mut instance_ssm_cache).await {
+                Some(true)
+            } else {
+                Some(false)
+            };
 
-            let can_ssm: bool =
-                if aws_handler::instance_can_ssm(&instance.instance_id.to_owned().unwrap())
-                { true } else { false };
-
-            vec.push(EC2TabledInstance {
-                is_wide: extended,
-                instance,
-                ssm: Some(can_ssm),
-                az: None,
-                instance_type: None,
-                spec: None,
-                private_dns: None,
-            });
-        } else {
-            // Non-wide (simple) version
-            vec.push(EC2TabledInstance {
-                is_wide: extended,
-                instance,
-                ssm: None,
-                az: None,
-                instance_type: None,
-                spec: None,
-                private_dns: None,
-            });
+            az = Some(instance.placement().unwrap().availability_zone().unwrap().to_string());
+            instance_type = Some(instance.instance_type().unwrap().as_str().to_string());
+            let k = instance.instance_type().unwrap().as_str();
+            spec = Some(specmap.as_ref().unwrap().get(k).unwrap().to_string());
         }
+
+        vec.push(EC2Instance {
+            is_extended: extended,
+            instance,
+            // Extended types
+            ssm,
+            az,
+            instance_type,
+            spec,
+        });
     }
 
     vec
 }
 
-#[derive(Debug)]
-struct EC2TabledInstance {
-    is_wide: bool,
+impl Tabulatable for EC2Command {
+    fn get_table_headers(&self, extended: bool) -> Vec<String> {
+        let mut headers: Vec<String> = Vec::new();
 
-    instance: aws_sdk_ec2::model::Instance,
-    ssm: Option<bool>,
-    az: Option<String>,
-    instance_type: Option<String>,
-    spec: Option<String>,
-    private_dns: Option<String>,
-}
+        headers.push("Instance ID".to_string());
+        headers.push("Name".to_string());
+        headers.push("State".to_string());
+        headers.push("Public IP".to_string());
+        headers.push("Private IP".to_string());
 
-impl EC2TabledInstance {
-    /// Gets a name for this instance. The `name` tag is used first.  If that is not present,
-    /// the tag `aws:eks:cluster-name` is used.  If that is also missing, the `None` variant
-    /// is returned.
-    pub fn get_name(&self) -> String {
-        match find_tag_value(self.instance.tags.as_ref().unwrap(), "Name") {
-            Some(string) => string,
-            None => match find_tag_value(self.instance.tags.as_ref().unwrap(), "aws:eks:cluster-name") {
-                Some(string) => format!("[EKS] {}", string),
-                None => "Untitled".to_string()
-            }
-        }
-    }
-}
-
-pub fn find_tag_value(tags: &Vec<aws_sdk_ec2::model::Tag>, key: &str) -> Option<String> {
-    for tag in tags {
-        if tag.key().unwrap() == key {
-            return Some(tag.value().unwrap().to_string());
-        }
-    }
-
-    None
-}
-
-// Non-wide mode:
-//   Instance ID, Name, State, Public IP, Private IP
-// Wide mode, additional:
-//   SSM?, AZ, Type, Spec, Private DNS
-
-impl Tabled for EC2TabledInstance {
-    const LENGTH: usize = 6;
-
-    fn fields(&self) -> Vec<Cow<'_, str>> {
-        let mut vec: Vec<Cow<str>> = Vec::new();
-        vec.push(Cow::from(self.instance.instance_id.as_ref().unwrap()));
-
-        let name = self.get_name();
-        vec.push(Cow::from(name));
-        vec.push(Cow::from(self.instance.state().as_ref().unwrap().name().unwrap().as_str()));
-
-        // IP addresses may not be assigned
-        vec.push(Cow::from(
-            match self.instance.public_ip_address.as_ref() {
-                Some(address) => address,
-                None => "None"
-            }
-        ));
-
-        vec.push(Cow::from(
-            match self.instance.private_ip_address.as_ref() {
-                Some(address) => address,
-                None => "None"
-            }
-        ));
-
-        // If this is an extended/wide display, also push the extended fields.
-        if (self.is_wide) {
-            vec.push(Cow::from(match self.ssm {
-                Some(ssm) => if (ssm) { "Yes" } else { "No" },
-                None => "-"
-            }));
+        if extended {
+            // Add the wide fields
+            headers.push("SSM".to_string());
+            headers.push("AZ".to_string());
+            headers.push("Type".to_string());
+            headers.push("Spec".to_string());
         }
 
-        vec
+        headers
     }
 
-    fn headers() -> Vec<Cow<'static, str>> {
-        let mut vec: Vec<Cow<str>> = Vec::new();
-        vec.push(Cow::from("Instance ID"));
-        vec.push(Cow::from("Name"));
-        vec.push(Cow::from("State"));
-        vec.push(Cow::from("Public IP"));
-        vec.push(Cow::from("Private IP"));
-        vec.push(Cow::from("SSM"));
+    fn get_table_rows(&self, extended: bool) -> Vec<Vec<String>> {
+        let mut rows: Vec<Vec<String>> = Vec::new();
 
-        vec
+        for instance in self.instances.iter() {
+            rows.push(instance.values(extended));
+        }
+
+        rows
     }
 }
-
