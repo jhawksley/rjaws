@@ -38,11 +38,6 @@ enum SubCommands {
         instance_id: String,
     },
 
-    /// Translate an instance ID to its public IP address (if available)
-    TR {
-        instance_id: String,
-    },
-
     /// Gets the caller identity from the Security Token Service
     GCI,
 }
@@ -52,19 +47,15 @@ enum SubCommands {
 #[tokio::main]
 async fn main() {
 
-    txt_line_output("RJaws - getting started...".to_string());
-
     // Parse options
     let options = Options::parse();
 
     // Switch based on the selected subcommand
 
     let command: Option<Box<dyn Command>> = match &options.subcommand {
-        SubCommands::EC2 => {
-            let c = commands::ec2::EC2Command::new();
-            Some(Box::new(c ) )
-        },
+        SubCommands::EC2 => Some(Box::new(commands::ec2::EC2Command::new()) ),
         SubCommands::GCI => Some(Box::new(commands::gci::GCICommand )),
+        SubCommands::SSM {instance_id} => Some(Box::new(commands::ssm::SSMCommand::new(instance_id) )),
         _ => None
     };
 
