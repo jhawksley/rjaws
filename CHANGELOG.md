@@ -1,6 +1,4 @@
-# Changelog
-
-## JAWS 3
+# Jaws 3 - Changelog
 
 ## 3.0.0
 
