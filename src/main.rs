@@ -4,7 +4,6 @@ use colored::*;
 
 use crate::commands::Command;
 use crate::errors::jaws_error::JawsError;
-use crate::textutils::txt_line_output;
 
 mod aws_handler;
 mod errors;
@@ -56,7 +55,6 @@ async fn main() {
         SubCommands::EC2 => Some(Box::new(commands::ec2::EC2Command::new()) ),
         SubCommands::GCI => Some(Box::new(commands::gci::GCICommand )),
         SubCommands::SSM {instance_id} => Some(Box::new(commands::ssm::SSMCommand::new(instance_id) )),
-        _ => None
     };
 
     match command {

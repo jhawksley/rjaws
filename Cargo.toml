@@ -14,6 +14,7 @@ async-trait = "0.1"
 colored = "2"
 tabled = "0.12"
 termion = "2"
+subprocess = "0.2"
 
 # AWS Dependencies
 aws-config = "0.55"
@@ -21,4 +22,3 @@ aws-sdk-sts = "0.27"
 aws-sdk-ec2 = "0.27"
 aws-sdk-iam = "0.27"
 aws-sdk-ssm = "0.27"
-subprocess = "0.2.9"

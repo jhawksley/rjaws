@@ -1,6 +1,5 @@
 use async_trait::async_trait;
 
-use crate::aws_handler;
 use crate::aws_handler::AWSHandler;
 use crate::commands::{Command, notify_clear, notify_comms};
 use crate::errors::jaws_error::JawsError;

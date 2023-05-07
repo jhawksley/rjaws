@@ -1,14 +1,15 @@
 // https://awslabs.github.io/aws-sdk-rust/
 
 use std::collections::HashMap;
+
 use aws_sdk_ec2;
 use aws_sdk_ec2::error::ProvideErrorMetadata;
-use aws_sdk_ec2::types::{Instance};
+use aws_sdk_ec2::types::Instance;
 use aws_sdk_iam::types::InstanceProfile;
 use aws_sdk_sts;
 use aws_sdk_sts::operation::get_caller_identity::GetCallerIdentityOutput;
-use crate::commands::notify_comms;
 
+use crate::commands::notify_comms;
 use crate::errors::jaws_error::JawsError;
 
 const TYPE_BATCH_SIZE: i32 = 100;

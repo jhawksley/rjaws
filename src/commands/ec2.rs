@@ -3,7 +3,7 @@ use aws_sdk_ec2::types::{Instance};
 
 use crate::{Options};
 use crate::aws_handler::AWSHandler;
-use crate::commands::{Command, notify_clear, notify_comms, notify_working};
+use crate::commands::{Command, notify_clear, notify_working, notify_comms};
 use crate::errors::jaws_error::JawsError;
 use crate::models::ec2_instance::EC2Instance;
 use crate::tabulatable::Tabulatable;
