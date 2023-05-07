@@ -16,10 +16,10 @@ will almost definitely cause the command to run more slowly.
 
 The following commands are available (in no particular order):
 
-1. *`gci`* - emit caller-identity information for the current AWS profile using the Security Token Service.  Can be used to check whether the current environment is valid. 
-2. *`ec2`* - emit a table of EC2 information for all instances in the current region.
+1. `gci` - emit caller-identity information for the current AWS profile using the Security Token Service.  Can be used to check whether the current environment is valid. 
+2. `ec2` - emit a table of EC2 information for all instances in the current region.
    * `--wide`: Also collects and tabulates extended information about each instance.
-3. *`ssm`* - log in to a given instance using SSM. The SSM module has a special requirement, see *Prerequisites* below.
+3. `ssm` - log in to a given instance using SSM. The SSM module has a special requirement, see *Prerequisites* below.
 
 # Installing
 
