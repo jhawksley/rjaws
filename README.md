@@ -21,6 +21,8 @@ The following commands are available (in no particular order):
    * `--wide`: Also collects and tabulates extended information about each instance.
 3. `ssm` - log in to a given instance using SSM. The SSM module has a special requirement, see *Prerequisites* below.
 
+For more information, run `jaws --help`.
+
 # Installing
 
 ## Prerequisites
