@@ -1,7 +1,11 @@
 [package]
 name = "rjaws"
-version = "0.1.0"
+version = "3.0.0-PRE"
 edition = "2021"
+
+[[bin]]
+name = "jaws"
+path ="src/main.rs"
 
 [dependencies]
 # General Dependencies
