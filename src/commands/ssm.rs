@@ -36,6 +36,13 @@ impl Command for SSMCommand {
 
         let cmd_string = &["aws", "ssm", "start-session", "--target", &self.instance_id];
         let popen_res = subprocess::Popen::create(cmd_string, PopenConfig::default());
+
+        // Signal handler
+
+        ctrlc::set_handler(move || {
+            // We don't need to do anything in here.  It will go to the subprocess.
+        }).expect("Error setting Ctrl-C handler");
+
         popen_res.expect("Couldn't open the AWS SSM module, ensure it is installed.");
 
         // Session is complete here
