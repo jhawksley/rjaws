@@ -20,6 +20,7 @@ tabled = "0.12"
 termion = "2"
 subprocess = "0.2"
 ctrlc = "3.2"
+signal-hook = "0.3.15"
 
 # AWS Dependencies
 aws-config = "0.55"
