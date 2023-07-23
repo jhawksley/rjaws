@@ -31,17 +31,19 @@ For more information, run `jaws --help`.
   run `aws sts get-caller-identity` to check this. If it doesn't work, neither will Jaws.
 * The SSM login module (command: `ssm`) relies on the AWS SSM Session Manager Plugin, in addition to the AWS CLI.  Both must be installed.  More information can be found here: [Install the Session Manager plugin for the AWS CLI](https://docs.aws.amazon.com/systems-manager/latest/userguide/session-manager-working-with-install-plugin.html).
 
-## Building and Installing
+## Building
 
 ### Binaries
 
 There aren't any binaries available yet.  Eventually the project will be installable with `cargo install` as a crate.  But this is still TBD.
 
-### Building from source
+### Building From Source
 
 #### Development
 
-The project can be built for release (without debug information) from scratch with the command:
+First clone the project's Git repo into your local envionrment.
+
+The project can then be built for release (without debug information) from scratch with the command:
 
 ```bash
 cargo build --release
@@ -57,9 +59,9 @@ To build and install the software into wherever `cargo` feels is most appropriat
 cargo install --path .
 ```
 
-On my workstation, this is `/Users/jhawksley/.cargo/bin`, which I add to my `$PATH`.
+On my workstation, this is `/Users/jhawksley/.cargo/bin`, which I've added to my `$PATH`.
 
-# Potted History
+# Short History
 
 Jaws was originally born out of a requirement to simplify some of the actions in AWS that I had to repeat a lot.  The AWS CLI itself is generated out of some kind of universal template, and while it is funciton, some of the commands are a bit... unwieldy.
 
