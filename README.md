@@ -50,7 +50,9 @@ cargo install --path .
 
 # Potted History
 
-Jaws was originally borne out of a requirement to simplify some of the actions in AWS that I had to repeat a lot.  I created shell aliases and functions for a few but the amount of API calls and JSON marshaling to achieve something simple was getting out of hand for shell scripts.
+Jaws was originally born out of a requirement to simplify some of the actions in AWS that I had to repeat a lot.  The AWS CLI itself is generated out of some kind of universal template, and while it is funciton, some of the commands are a bit... unwieldy.
+
+I originally created shell aliases and functions for a few but the amount of API calls and JSON marshaling to achieve something simple was getting out of hand.  I wanted functions common to all scripts; this is possible but it's something of a hack (imho).
 
 **Jaws 1.0** was written in Ruby, which I still love, but which was going out of fashion even as I started learning it. 
 
@@ -58,15 +60,11 @@ A couple of years later I had a requirement to learn Python for another project,
 
 I don't intend to change languages again. But I said that the first two times too.
 
-# Warnings - Costs/Accuracy
+# Warnings
 
-## Costs
+## Costs and Accuracy
 
-Jaws makes calls to the AWS API on your behalf. The author(s) are not responsible for any costs
-incurred using this software.
+Jaws makes calls to the AWS API on your behalf.  Some of these calls may be charged to you by AWS.  The author(s) are not responsible for any costs incurred using this software.
 
-## Accuracy
-
-Any financial information emitted by the software is for information only, and the user should
-double-check its correctness before making any decisions based on it.
+Any financial information emitted by the software is for information only, and the user should double-check its correctness before making any decisions based on it.
 
