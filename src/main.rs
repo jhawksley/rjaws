@@ -16,8 +16,12 @@ mod textutils;
 #[clap(author, version, about, long_about = None)]
 pub struct Options {
     /// Output wider, more detailed data.  May cause slower execution in some cases.
-    #[clap(short, long, default_value_t = false, )]
+    #[clap(short, long, default_value_t = false)]
     wide: bool,
+
+    /// A region to select (otherwise the default region is used)
+    #[clap(short, long)]
+    region: Option<String>,
 
     /// A subcommand to run
     #[command(subcommand)]
@@ -52,13 +56,13 @@ async fn main() {
     // Switch based on the selected subcommand
 
     let command: Option<Box<dyn Command>> = match &options.subcommand {
-        SubCommands::EC2 => Some(Box::new(commands::ec2::EC2Command::new()) ),
-        SubCommands::GCI => Some(Box::new(commands::gci::GCICommand )),
-        SubCommands::SSM {instance_id} => Some(Box::new(commands::ssm::SSMCommand::new(instance_id) )),
+        SubCommands::EC2 => Some(Box::new(commands::ec2::EC2Command::new())),
+        SubCommands::GCI => Some(Box::new(commands::gci::GCICommand)),
+        SubCommands::SSM { instance_id } => Some(Box::new(commands::ssm::SSMCommand::new(instance_id))),
     };
 
     match command {
-        Some(mut c ) => {
+        Some(mut c) => {
             match c.run(&options).await {
                 Ok(_) => {} // Success - command ran to completion
                 Err(e) => handle_and_abort(e)
