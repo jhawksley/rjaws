@@ -11,6 +11,7 @@ use aws_sdk_sts::operation::get_caller_identity::GetCallerIdentityOutput;
 
 use crate::commands::notify_comms;
 use crate::errors::jaws_error::JawsError;
+use crate::Options;
 
 const TYPE_BATCH_SIZE: i32 = 100;
 
@@ -18,6 +19,7 @@ pub struct AWSHandler {
     instance_profile_cache: HashMap<String, InstanceProfile>,
     instance_profile_ssm_mapping_cache: HashMap<String, bool>,
     specmap: HashMap<String, String>,
+    region: Option<String>,
 }
 
 
@@ -27,12 +29,30 @@ impl Default for AWSHandler {
             instance_profile_cache: HashMap::new(),
             instance_profile_ssm_mapping_cache: HashMap::new(),
             specmap: HashMap::new(),
+            region: None,
         }
     }
 }
 
 
 impl AWSHandler {
+    /// Get a new handler, primed with any optional elements.
+    pub fn new(options: &Options) -> Self {
+        let mut handler = AWSHandler::default();
+        handler.region = match &options.region {
+            None => None,
+            Some(region) => Some(region.to_string())
+        };
+
+        // Set this in the environment if it's set.  The AWS library will then pick it up
+        // during the various client creation statements.
+        if handler.region.is_some() {
+            std::env::set_var("AWS_DEFAULT_REGION", handler.region.as_ref().unwrap());
+        }
+
+        handler
+    }
+
     /// Return the current context's STS caller identity.
     pub async fn sts_get_caller_identity(&self) -> Result<GetCallerIdentityOutput, JawsError> {
         let res = aws_sdk_sts::Client::new(&aws_config::load_from_env().await)

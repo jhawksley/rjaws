@@ -24,7 +24,7 @@ impl EC2Command {
 #[async_trait]
 impl Command for EC2Command {
     async fn run(&mut self, options: &Options) -> Result<(), JawsError> {
-        let mut handler = AWSHandler::default();
+        let mut handler = AWSHandler::new(options);
 
         // Update the user we're talking to AWS
         notify_comms(Some("checking caller ID".to_string()));
