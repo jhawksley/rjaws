@@ -37,7 +37,7 @@ impl Command for EC2Command {
         match handler.ec2_get_all().await {
             Ok(instances) => {
                 if instances.len() == 0 {
-                    txt_line_output("No instances found.".to_string());
+                    txt_line_output("No instances found.\n".to_string());
                 } else {
                     // Convert the AWS instances to our own type
                     notify_working();
