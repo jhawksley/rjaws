@@ -1287,7 +1287,7 @@ dependencies = [
 
 [[package]]
 name = "rjaws"
-version = "3.0.0-PRE"
+version = "3.1.0-PRE"
 dependencies = [
  "async-trait",
  "aws-config",
