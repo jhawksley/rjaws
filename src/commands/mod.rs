@@ -1,6 +1,7 @@
 pub mod gci;
 pub mod ec2;
 pub mod ssm;
+pub mod res;
 
 use crate::errors::jaws_error::JawsError;
 use crate::Options;

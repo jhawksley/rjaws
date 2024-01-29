@@ -43,6 +43,9 @@ enum SubCommands {
 
     /// Gets the caller identity from the Security Token Service
     GCI,
+
+    /// Calculate reservation costs and fleet coverage
+    RES,
 }
 
 
@@ -59,6 +62,7 @@ async fn main() {
         SubCommands::EC2 => Some(Box::new(commands::ec2::EC2Command::new())),
         SubCommands::GCI => Some(Box::new(commands::gci::GCICommand)),
         SubCommands::SSM { instance_id } => Some(Box::new(commands::ssm::SSMCommand::new(instance_id))),
+        SubCommands::RES => Some(Box::new(commands::res::ResCommand::new())),
     };
 
     match command {
