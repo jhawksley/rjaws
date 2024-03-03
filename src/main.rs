@@ -1,13 +1,13 @@
 use clap::Parser;
-use std::process;
 use colored::*;
+use std::process;
 
 use crate::commands::Command;
 use crate::errors::jaws_error::JawsError;
 
 mod aws_handler;
-mod errors;
 mod commands;
+mod errors;
 mod models;
 mod tabulatable;
 mod textutils;
@@ -28,7 +28,6 @@ pub struct Options {
     subcommand: SubCommands,
 }
 
-
 // Subcommands and their options
 #[derive(clap::Subcommand, Debug)]
 enum SubCommands {
@@ -48,11 +47,9 @@ enum SubCommands {
     RES,
 }
 
-
 // Main: starts here. We need tokio because the AWS libraries need it.
 #[tokio::main]
 async fn main() {
-
     // Parse options
     let options = Options::parse();
 
@@ -61,7 +58,9 @@ async fn main() {
     let command: Option<Box<dyn Command>> = match &options.subcommand {
         SubCommands::EC2 => Some(Box::new(commands::ec2::EC2Command::new())),
         SubCommands::GCI => Some(Box::new(commands::gci::GCICommand)),
-        SubCommands::SSM { instance_id } => Some(Box::new(commands::ssm::SSMCommand::new(instance_id))),
+        SubCommands::SSM { instance_id } => {
+            Some(Box::new(commands::ssm::SSMCommand::new(instance_id)))
+        }
         SubCommands::RES => Some(Box::new(commands::res::ResCommand::new())),
     };
 
@@ -69,19 +68,24 @@ async fn main() {
         Some(mut c) => {
             match c.run(&options).await {
                 Ok(_) => {} // Success - command ran to completion
-                Err(e) => handle_and_abort(e)
+                Err(e) => handle_and_abort(e),
             }
         }
-        None => handle_and_abort(JawsError::new(format!("Command '{:?}' not found", options.subcommand))),
+        None => handle_and_abort(JawsError::new(format!(
+            "Command '{:?}' not found",
+            options.subcommand
+        ))),
     }
 }
 
 fn handle_and_abort(error: JawsError) {
     textutils::txt_line_clear();
 
-    println!("{}\n\n{}\n", "*** ABORT ***".red().bold().underline(),
-             "Software aborted with the following error:".red());
+    println!(
+        "{}\n\n{}\n",
+        "*** ABORT ***".red().bold().underline(),
+        "Software aborted with the following error:".red()
+    );
     println!("{}", error.to_string().red());
     process::exit(1);
 }
-

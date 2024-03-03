@@ -10,7 +10,7 @@ pub trait Tabulatable {
 
         // Get the tabled headers
         let headers = self.get_table_headers(extended);
-        builder.set_header(headers.into_iter());
+        builder.push_record(headers.into_iter());
 
         for value in self.get_table_rows(extended) {
             builder.push_record(value.into_iter());
