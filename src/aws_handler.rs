@@ -1,18 +1,17 @@
 // https://awslabs.github.io/aws-sdk-rust/
 
-use aws_config::BehaviorVersion;
 use std::collections::HashMap;
-use std::ops::Deref;
 
+use aws_config::{BehaviorVersion, Region};
 use aws_sdk_ec2;
 use aws_sdk_ec2::error::ProvideErrorMetadata;
-use aws_sdk_ec2::types::builders::FilterBuilder;
-use aws_sdk_ec2::types::{Filter, Instance, Reservation, ReservedInstances};
+use aws_sdk_ec2::types::{Filter, Instance, InstanceType, ReservedInstances};
 use aws_sdk_iam::types::InstanceProfile;
+use aws_sdk_pricing::types;
+use aws_sdk_pricing::types::FilterType;
 use aws_sdk_sts;
 use aws_sdk_sts::operation::get_caller_identity::GetCallerIdentityOutput;
-use tracing::debug;
-use tracing_subscriber::filter::Filtered;
+use serde_json::Value;
 
 use crate::commands::notify_comms;
 use crate::errors::jaws_error::JawsError;
@@ -24,14 +23,17 @@ pub struct AWSHandler {
     instance_profile_cache: HashMap<String, InstanceProfile>,
     instance_profile_ssm_mapping_cache: HashMap<String, bool>,
     specmap: HashMap<String, String>,
+    odm_rate_cache: HashMap<InstanceType, f32>,
     region: Option<String>,
 }
+
 
 impl Default for AWSHandler {
     fn default() -> Self {
         Self {
             instance_profile_cache: HashMap::new(),
             instance_profile_ssm_mapping_cache: HashMap::new(),
+            odm_rate_cache: HashMap::new(),
             specmap: HashMap::new(),
             region: None,
         }
@@ -40,10 +42,10 @@ impl Default for AWSHandler {
 
 impl AWSHandler {
     /// Get a new handler, primed with any optional elements.
-    pub fn new(options: &Options) -> Self {
+    pub async fn new(options: &Options) -> Self {
         let mut handler = AWSHandler::default();
         handler.region = match &options.region {
-            None => None,
+            None => Some(aws_config::load_defaults(BehaviorVersion::latest()).await.region().unwrap().to_string()),
             Some(region) => Some(region.to_string()),
         };
 
@@ -193,6 +195,96 @@ impl AWSHandler {
             Ok(resp) => Ok(resp.reserved_instances.unwrap()),
             Err(error) => Err(JawsError::new(format!("{}", error))),
         }
+    }
+
+    pub(crate) async fn get_odm_rate(&mut self, instance_type: &InstanceType) -> f32 {
+        // Get the on-demand rate for a given instance type.
+
+        // Check if it's already in the cache
+        if ! self.odm_rate_cache.contains_key(instance_type) {
+
+            // Get the on-demand rate and cache it, then return it
+            // AWS Pricing is not available everywhere - we use eu-central-1 to access it.
+
+            let mut config = aws_config::load_defaults(BehaviorVersion::latest()).await;
+            config = config.to_builder().region(Region::from_static("eu-central-1")).build();
+
+            let client = aws_sdk_pricing::Client::new(&config);
+
+            let instance_type_filter = types::Filter::builder()
+                .r#type(FilterType::TermMatch)
+                .field("instanceType")
+                .value(instance_type.as_str())
+                .build().unwrap();
+            let region_code_filter = types::Filter::builder()
+                .r#type(FilterType::TermMatch)
+                .field("regionCode")
+                .value(self.region.as_ref().unwrap())
+                .build().unwrap();
+            let software_filter = types::Filter::builder()
+                .r#type(FilterType::TermMatch)
+                .field("preInstalledSw")
+                .value("NA")
+                .build().unwrap();
+            let tenancy_filter = types::Filter::builder()
+                .r#type(FilterType::TermMatch)
+                .field("tenancy")
+                .value("Shared")
+                .build().unwrap();
+            let product_family_filter = types::Filter::builder()
+                .r#type(FilterType::TermMatch)
+                .field("productfamily")
+                .value("compute instance")
+                .build().unwrap();
+            let os_filter = types::Filter::builder()
+                .r#type(FilterType::TermMatch)
+                .field("operatingSystem")
+                .value("Linux")
+                .build().unwrap();
+            let capacity_filter = types::Filter::builder()
+                .r#type(FilterType::TermMatch)
+                .field("capacityStatus")
+                .value("Used")
+                .build().unwrap();
+
+            let result = client
+                .get_products()
+                .filters(instance_type_filter)
+                .filters(region_code_filter)
+                .filters(software_filter)
+                .filters(product_family_filter)
+                .filters(tenancy_filter)
+                .filters(os_filter)
+                .filters(capacity_filter)
+                .service_code("AmazonEC2")
+                .send().await.unwrap();
+
+            // for price in result.price_list() {
+            //     println!("{}", price);
+            // }
+
+            assert_eq!(result.price_list().len(), 1, "ODM pricing data search for '{}' returned non-unique result ({}).", instance_type.to_string(), result.price_list().len());
+
+            let price_data: Value = serde_json::from_str(result.price_list()[0].as_str()).unwrap();
+
+            // The next stage is a bit fiddly, because the name of the key after the tree node "OnDemand"
+            // is dynamic.`as_object()` converts it to a map, so we can get the first value.
+            let mut odm: &Value = &price_data["terms"]["OnDemand"].as_object().unwrap()
+                .values().next().unwrap();
+
+            // ... And again.
+            odm = odm["priceDimensions"].as_object().unwrap()
+                .values().next().unwrap();
+
+            odm = &odm["pricePerUnit"]["USD"];
+
+            // Get the final price out of the string.
+            let price: f32 = odm.as_str().unwrap().parse::<f32>().unwrap();
+
+            self.odm_rate_cache.insert(instance_type.clone(), price);
+        }
+
+        return *self.odm_rate_cache.get(instance_type).unwrap();
     }
 
     // -------------------------------------------------------------------------------

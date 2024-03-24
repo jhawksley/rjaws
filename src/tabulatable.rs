@@ -1,9 +1,19 @@
 use tabled::builder::Builder;
-use tabled::settings::Style;
+use tabled::grid::config::Entity::Column;
+use tabled::settings::{Alignment, Settings, Style, Width};
+use tabled::settings::object::{Columns, Rows};
+use tabled::settings::peaker::PriorityMax;
+use tabled::Table;
+
+use crate::textutils::get_terminal_size;
 
 pub trait Tabulatable {
     fn get_table_headers(&self, extended: bool) -> Vec<String>;
     fn get_table_rows(&self, extended: bool) -> Vec<Vec<String>>;
+
+    fn modify(&self, table: &mut Table) {
+        // Default impl does nothing
+    }
 
     fn tabulate(&self, extended: bool) {
         let mut builder = Builder::default();
@@ -16,8 +26,28 @@ pub trait Tabulatable {
             builder.push_record(value.into_iter());
         }
 
+        // Enlarge to term width
+        let (width, height) = get_terminal_size();
+
+        let term_size_settings = Settings::default()
+            .with(Width::wrap(width).priority::<PriorityMax>())
+            .with(Width::increase(width));
+
+        let mut builder = builder.build();
+
+        let table = builder
+            .with(Style::rounded())
+            .with(term_size_settings);
+        // .modify(Columns::new(1..), Alignment::right())
+
+        // Center the first row
+        table.modify(Rows::first(), Alignment::center());
+
+        // Allow the subtype to modify the table prior to printing, to apply any formatting etc.
+        self.modify( table );
+
         // Print the table
-        println!("{}", builder.build().with(Style::rounded()).to_string());
+        println!("{table}");
     }
 }
 

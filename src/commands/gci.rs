@@ -13,7 +13,7 @@ impl Command for GCICommand
     async fn run(&mut self, options: &Options) -> Result<(), JawsError> {
 
         notify_comms(None);
-        let handler: AWSHandler = AWSHandler::new(options);
+        let handler: AWSHandler = AWSHandler::new(options).await;
 
         let id = handler.sts_get_caller_identity();
         let identity_result = id.await;
