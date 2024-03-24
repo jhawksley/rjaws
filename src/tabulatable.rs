@@ -1,7 +1,6 @@
 use tabled::builder::Builder;
-use tabled::grid::config::Entity::Column;
 use tabled::settings::{Alignment, Settings, Style, Width};
-use tabled::settings::object::{Columns, Rows};
+use tabled::settings::object::Rows;
 use tabled::settings::peaker::PriorityMax;
 use tabled::Table;
 
@@ -11,7 +10,7 @@ pub trait Tabulatable {
     fn get_table_headers(&self, extended: bool) -> Vec<String>;
     fn get_table_rows(&self, extended: bool) -> Vec<Vec<String>>;
 
-    fn modify(&self, table: &mut Table) {
+    fn modify(&self, _table: &mut Table) {
         // Default impl does nothing
     }
 
@@ -27,7 +26,7 @@ pub trait Tabulatable {
         }
 
         // Enlarge to term width
-        let (width, height) = get_terminal_size();
+        let (width, _height) = get_terminal_size();
 
         let term_size_settings = Settings::default()
             .with(Width::wrap(width).priority::<PriorityMax>())

@@ -11,7 +11,7 @@ use crate::{Options, SubCommands};
 pub struct SSMCommand {}
 
 impl SSMCommand {
-    pub fn new(instance_id: &String) -> Self {
+    pub fn new() -> Self {
         Self {}
     }
 

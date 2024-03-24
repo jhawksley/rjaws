@@ -11,12 +11,11 @@ use crate::aws_handler::AWSHandler;
 use crate::commands::{Command, notify_clear, notify_comms, notify_working};
 use crate::commands::ec2::EC2Command;
 use crate::errors::jaws_error::JawsError;
-use crate::SubCommands::EC2;
 use crate::tabulatable::Tabulatable;
 use crate::textutils::{center_text, report_title};
 
-const SECONDS_PER_YEAR: i32 = (60 * 60 * 24 * 365);
-const HOURS_PER_YEAR: i32 = (24 * 365);
+const SECONDS_PER_YEAR: i32 = 60 * 60 * 24 * 365;
+const HOURS_PER_YEAR: i32 = 24 * 365;
 
 pub struct ResCommand {}
 
@@ -48,7 +47,7 @@ impl Command for ResCommand
 
         // Otherwise we have a good list of reservations.
 
-        if (reservations.len() == 0) {
+        if reservations.len() == 0 {
             println!("No active reservations found.");
             return Ok(());
         }
@@ -69,7 +68,7 @@ impl Command for ResCommand
 
         if let SubCommands::RES { show_unused } = options.subcommand {
             if show_unused {
-                let mut instance_result = handler.ec2_get_all().await?;
+                let instance_result = handler.ec2_get_all().await?;
                 let uncovered_instances = thin_reservations(&instance_result, &mut reservations);
 
                 // Calculate and dump the unused reservations  (or a "none" string if there aren't any).
@@ -138,14 +137,14 @@ fn dump_model_tabular(model: &CalculationModel) {
 }
 
 impl Tabulatable for CalculationModel {
-    fn get_table_headers(&self, extended: bool) -> Vec<String> {
+    fn get_table_headers(&self, _extended: bool) -> Vec<String> {
         vec!["Type".to_string(), "#".to_string(), "AZ".to_string(), "Expiry".to_string(),
              "Days".to_string(), "Term Yrs".to_string(), "Model".to_string(), "$ Res / Hr".to_string(),
              "$ Res Fixed".to_string(), "$ Res Yearly".to_string(), "$ ODM / Hr".to_string(), "$ ODM Yearly".to_string(),
              "$ Saving Yearly".to_string()]
     }
 
-    fn get_table_rows(&self, extended: bool) -> Vec<Vec<String>> {
+    fn get_table_rows(&self, _extended: bool) -> Vec<Vec<String>> {
         let mut rows: Vec<Vec<String>> = Vec::new();
 
         for res in self.elements.iter().by_ref() {
@@ -169,7 +168,7 @@ impl Tabulatable for CalculationModel {
 
         // Totals
         let empty: String = "".to_string();
-        let mut row = vec![empty.clone(), empty.clone(), empty.clone(), empty.clone(), empty.clone(), empty.clone(), empty.clone(),
+        let row = vec![empty.clone(), empty.clone(), empty.clone(), empty.clone(), empty.clone(), empty.clone(), empty.clone(),
                            empty.clone(),
                            "Total".to_string(),
                            format_money(self.total_actual_yearly),
@@ -220,7 +219,6 @@ async fn calculate_model(reservations: &Vec<ReservedInstances>, handler: &mut AW
 
     let mut total_odm_yearly: f32 = 0.0;
     let mut total_res_yearly: f32 = 0.0;
-    let mut total_saving: f32 = 0.0;
 
     for res in reservations {
 
@@ -262,7 +260,7 @@ fn sum_recurring_charges(charges: &[RecurringCharge]) -> f32 {
 
     for charge in charges {
         // Currently there is only Hourly
-        sum = sum + match (charge.frequency().unwrap()) {
+        sum = sum + match charge.frequency().unwrap() {
             RecurringChargeFrequency::Hourly => charge.amount().unwrap() as f32,
             _ => panic!("Recurring charge frequency {} unknown!",
                         charge.frequency().unwrap().as_str())

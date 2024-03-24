@@ -67,10 +67,10 @@ async fn main() {
     let command: Option<Box<dyn Command>> = match &options.subcommand {
         SubCommands::EC2 => Some(Box::new(commands::ec2::EC2Command::new())),
         SubCommands::GCI => Some(Box::new(commands::gci::GCICommand)),
-        SubCommands::SSM { instance_id } => {
-            Some(Box::new(commands::ssm::SSMCommand::new(instance_id)))
+        SubCommands::SSM { instance_id: _ } => {
+            Some(Box::new(commands::ssm::SSMCommand::new()))
         }
-        SubCommands::RES { show_unused} => Some(Box::new(commands::res::ResCommand::new())),
+        SubCommands::RES { show_unused: _} => Some(Box::new(commands::res::ResCommand::new())),
     };
 
 
