@@ -22,7 +22,7 @@ impl EC2Command {
         }
     }
 
-    pub(crate) async fn run_with_filter(&mut self, instances: Vec<String>, options: &Options) {
+    pub(crate) async fn run_with_filter(&mut self, instances: Vec<String>, options: &mut Options) {
         self.instance_filter = Some(instances);
         _ = self.run(options).await;
     }
@@ -30,7 +30,7 @@ impl EC2Command {
 
 #[async_trait]
 impl Command for EC2Command {
-    async fn run(&mut self, options: &Options) -> Result<(), JawsError> {
+    async fn run(&mut self, options: &mut Options) -> Result<(), JawsError> {
         let mut handler = AWSHandler::new(options).await;
 
         // Update the user we're talking to AWS

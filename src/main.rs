@@ -58,7 +58,7 @@ enum SubCommands {
 #[tokio::main]
 async fn main() {
     // Parse options
-    let options = Options::parse();
+    let mut options = Options::parse();
 
     // tracing_subscriber::fmt::init();
 
@@ -76,7 +76,7 @@ async fn main() {
 
     match command {
         Some(mut c) => {
-            match c.run(&options).await {
+            match c.run(&mut options).await {
                 Ok(_) => {} // Success - command ran to completion
                 Err(e) => handle_and_abort(e),
             }

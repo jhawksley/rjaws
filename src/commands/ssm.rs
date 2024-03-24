@@ -30,7 +30,7 @@ impl SSMCommand {
 
 #[async_trait]
 impl Command for SSMCommand {
-    async fn run(&mut self, options: &Options) -> Result<(), JawsError> {
+    async fn run(&mut self, options: &mut Options) -> Result<(), JawsError> {
 
         let mut instance = "Unknown";
 

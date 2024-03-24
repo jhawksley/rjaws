@@ -10,7 +10,7 @@ pub struct GCICommand;
 #[async_trait]
 impl Command for GCICommand
 {
-    async fn run(&mut self, options: &Options) -> Result<(), JawsError> {
+    async fn run(&mut self, options: &mut Options) -> Result<(), JawsError> {
 
         notify_comms(None);
         let handler: AWSHandler = AWSHandler::new(options).await;

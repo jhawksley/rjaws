@@ -30,7 +30,7 @@ impl ResCommand
 #[async_trait]
 impl Command for ResCommand
 {
-    async fn run(&mut self, options: &Options) -> Result<(), JawsError> {
+    async fn run(&mut self, options: &mut Options) -> Result<(), JawsError> {
         let mut handler = AWSHandler::new(options).await;
 
         notify_comms(Some("Getting reservation data".to_string()));
@@ -87,6 +87,7 @@ impl Command for ResCommand
                 report_title(format!("Uncovered EC2 Instances ({})", uncovered_instances.len()));
                 if uncovered_instances.len() > 0 {
                     let mut ec2_command: EC2Command = EC2Command::new();
+                    options.wide = true;
                     ec2_command.run_with_filter(uncovered_instances, options).await;
                 } else {
                     println!("{}", center_text("** NONE **".to_string()));
@@ -121,6 +122,7 @@ fn thin_reservations(instances: &Vec<Instance>, reservations: &mut Vec<ReservedI
                 // else continue the next reservation.
             }
         }
+
         // If we get this far, we exhausted all the reservations - this is an uncovered instance.
         uncovered.push(instance.instance_id.as_ref().unwrap().clone());
     }

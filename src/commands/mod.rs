@@ -10,7 +10,7 @@ use crate::textutils::{txt_line_clear, txt_line_output};
 
 #[async_trait]
 pub trait Command {
-    async fn run(&mut self, options: &Options) -> Result<(), JawsError>;
+    async fn run(&mut self, options: &mut Options) -> Result<(), JawsError>;
 }
 
 pub fn notify_comms(action: Option<String>) {
