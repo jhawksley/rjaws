@@ -1,6 +1,6 @@
 [package]
 name = "rjaws"
-version = "3.1.0-PRE"
+version = "3.1.0-REL"
 edition = "2021"
 
 [[bin]]
