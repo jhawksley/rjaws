@@ -17,11 +17,11 @@ The following commands are implemented:
 - `ec2` - emit a table of EC2 information for all instances in the current region.
    * `--wide`: Also collects and tabulates extended information about each instance.
 - `ssm` - log in to a given instance using SSM. The SSM module has a special requirement, see *Prerequisites* below.
+- `res` - run a reservation (used, unused, uncovered instances) report.
 
 For more information, run `jaws --help`.
 
-## Global Flags
-- `--region` will cause Jaws to run API calls in the specified region, rather than the default.
+For information on options to a command run `jaws <command> --help`.
 
 # Installing
 

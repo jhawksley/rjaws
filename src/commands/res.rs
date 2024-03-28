@@ -48,6 +48,7 @@ impl Command for ResCommand
         // Otherwise we have a good list of reservations.
 
         if reservations.len() == 0 {
+            notify_clear();
             println!("No active reservations found.");
             return Ok(());
         }
