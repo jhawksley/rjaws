@@ -1,6 +1,6 @@
 use std::io::{stdout, Write};
 
-use terminal_size::{Height as TerminalHeight, terminal_size, Width as TerminalWidth};
+use terminal_size::{Height as TerminalHeight, Height, terminal_size, Width as TerminalWidth, Width};
 use termion::clear::CurrentLine;
 use termion::color::{Blue, Fg};
 use termion::style;
@@ -19,8 +19,10 @@ pub fn txt_line_clear() {
 }
 
 pub fn get_terminal_size() -> (usize, usize) {
+    // We need to do unwrap_or here and supply a default, because if Jaws is run inside a unix
+    // pipeline, there is no tty.
     let (TerminalWidth(width), TerminalHeight(height)) =
-        terminal_size().expect("failed to obtain a terminal size");
+        terminal_size().unwrap_or((Width(120), Height(30)));
 
     (width as usize, height as usize)
 }
