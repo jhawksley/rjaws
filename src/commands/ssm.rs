@@ -6,17 +6,13 @@ use signal_hook::{consts::SIGTSTP, consts::SIGINT, iterator::Signals};
 
 use crate::commands::{Command, notify, to_hms};
 use crate::errors::jaws_error::JawsError;
-use crate::Options;
+use crate::{Options, SubCommands};
 
-pub struct SSMCommand {
-    instance_id: String,
-}
+pub struct SSMCommand {}
 
 impl SSMCommand {
-    pub fn new(instance_id: &String) -> Self {
-        Self {
-            instance_id: instance_id.to_string()
-        }
+    pub fn new() -> Self {
+        Self {}
     }
 
     /// Set up ctrl-C and ctrl-Z signal handlers so they are passed to the subprocess
@@ -34,8 +30,16 @@ impl SSMCommand {
 
 #[async_trait]
 impl Command for SSMCommand {
-    async fn run(&mut self, _options: &Options) -> Result<(), JawsError> {
-        notify(format!("Opening SSM session with {}\n", self.instance_id));
+    async fn run(&mut self, options: &mut Options) -> Result<(), JawsError> {
+
+        let mut instance = "Unknown";
+
+
+        if let SubCommands::SSM { instance_id } = &options.subcommand {
+            instance = instance_id;
+        }
+
+        notify(format!("Opening SSM session with {}\n", instance));
 
         let start_time = Instant::now();
 
@@ -48,7 +52,7 @@ impl Command for SSMCommand {
         // To get something running, we use the old Jaws 2 way of spawning SSM - spawn the AWS
         // SSM module.
 
-        let cmd_string = &["aws", "ssm", "start-session", "--target", &self.instance_id];
+        let cmd_string = &["aws", "ssm", "start-session", "--target", instance];
         Self::set_signal_handlers();
         let popen_res = subprocess::Popen::create(cmd_string, PopenConfig::default());
         popen_res.expect("Couldn't open the AWS SSM module, ensure it is installed.");

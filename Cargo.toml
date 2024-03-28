@@ -9,21 +9,28 @@ path ="src/main.rs"
 
 [dependencies]
 # General Dependencies
-tokio = { version = "1", features = ["full"] }   # Required for AWS
-clap = { version = "4.3.19", features = ["derive"] }
+tokio = { version = "1.36", features = ["full"] }   # Required for AWS
+clap = { version = "4.5.3", features = ["derive"] }
 tracing = "0.1"
 tracing-subscriber = "0.3"
 futures = "0.3"
 async-trait = "0.1"
 colored = "2"
-tabled = "0.14"
-termion = "2"
+tabled = "0.15"
+termion = "3"
 subprocess = "0.2"
 signal-hook = "0.3.15"
+chrono = "0.4.35"
+serde_json = "1.0"
+num-format = "0.4"
+terminal_size = "0.2"
 
 # AWS Dependencies
-aws-config = "0.56.0"
-aws-sdk-sts = "0.29.0"
-aws-sdk-ec2 = "0.29.0"
-aws-sdk-iam = "0.29.0"
-aws-sdk-ssm = "0.29.0"
+aws-config = "1.1"
+aws-sdk-sts = "1.12"
+aws-sdk-ec2 = "1.17"
+aws-sdk-iam = "1.12"
+aws-sdk-ssm = "1.12"
+aws-sdk-pricing = "1.19"
+
+aws-smithy-types-convert = { version = "0.60.8", features = ["convert-chrono"] }
