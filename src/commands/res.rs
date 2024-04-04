@@ -69,7 +69,9 @@ impl Command for ResCommand
 
         if let SubCommands::RES { show_unused } = options.subcommand {
             if show_unused {
-                let instance_result = handler.ec2_get_all().await?;
+                let mut instance_result = handler.ec2_get_all().await?;
+                // remove Terminated instances for this command.
+                instance_result.retain(|x| x.state().unwrap().name().unwrap().as_str() == "running");
                 let uncovered_instances = thin_reservations(&instance_result, &mut reservations);
 
                 // Calculate and dump the unused reservations  (or a "none" string if there aren't any).
@@ -92,7 +94,6 @@ impl Command for ResCommand
                 } else {
                     println!("{}", center_text("** NONE **".to_string()));
                 }
-
             }
         }
 
@@ -170,12 +171,12 @@ impl Tabulatable for CalculationModel {
         // Totals
         let empty: String = "".to_string();
         let row = vec![empty.clone(), empty.clone(), empty.clone(), empty.clone(), empty.clone(), empty.clone(), empty.clone(),
-                           empty.clone(),
-                           "Total".to_string(),
-                           format_money(self.total_actual_yearly),
-                           empty.clone(),
-                           format_money(self.total_odm_yearly),
-                           format_money(self.total_odm_yearly - self.total_actual_yearly)];
+                       empty.clone(),
+                       "Total".to_string(),
+                       format_money(self.total_actual_yearly),
+                       empty.clone(),
+                       format_money(self.total_odm_yearly),
+                       format_money(self.total_odm_yearly - self.total_actual_yearly)];
 
         rows.push(vec![]);
         rows.push(row);
