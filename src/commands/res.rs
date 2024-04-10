@@ -5,6 +5,8 @@ use chrono::{DateTime, Utc};
 use tabled::settings::Alignment;
 use tabled::settings::object::Columns;
 use tabled::Table;
+use sprintf::sprintf;
+
 
 use crate::{Options, SubCommands};
 use crate::aws_handler::AWSHandler;
@@ -72,10 +74,11 @@ impl Command for ResCommand
                 let mut instance_result = handler.ec2_get_all().await?;
                 // remove Terminated instances for this command.
                 instance_result.retain(|x| x.state().unwrap().name().unwrap().as_str() == "running");
-                let uncovered_instances = thin_reservations(&instance_result, &mut reservations);
+                let (covered_instances, uncovered_instances) = thin_reservations(&instance_result, &mut reservations);
 
                 // Calculate and dump the unused reservations  (or a "none" string if there aren't any).
                 let unused_model = calculate_model(&reservations, &mut handler).await;
+
                 println!();
                 report_title(format!("Unused EC2 Reservations ({})", unused_model.elements.len()));
                 if reservations.len() > 0 {
@@ -84,16 +87,9 @@ impl Command for ResCommand
                     println!("{}", center_text("** NONE **".to_string()));
                 }
 
-                // Output the uncovered instances, if there are any.as
-                println!();
-                report_title(format!("Uncovered EC2 Instances ({})", uncovered_instances.len()));
-                if uncovered_instances.len() > 0 {
-                    let mut ec2_command: EC2Command = EC2Command::new();
-                    options.wide = true;
-                    ec2_command.run_with_filter(uncovered_instances, options).await;
-                } else {
-                    println!("{}", center_text("** NONE **".to_string()));
-                }
+                output_table(uncovered_instances, "Uncovered EC2 Instances (%d)", options).await;
+                output_table(covered_instances, "Covered EC2 Instances (%d)", options).await;
+
             }
         }
 
@@ -101,11 +97,28 @@ impl Command for ResCommand
     }
 }
 
-fn thin_reservations(instances: &Vec<Instance>, reservations: &mut Vec<ReservedInstances>) -> Vec<String> {
+
+async fn output_table(instances: Vec<String>, title: &str, options: &mut Options) {
+
+    // Output the uncovered instances, if there are any.
+    println!();
+    report_title(sprintf!(title, instances.len()).unwrap());
+
+    if instances.len() > 0 {
+        let mut ec2_command: EC2Command = EC2Command::new();
+        options.wide = true;
+        ec2_command.run_with_filter(instances, options).await;
+    } else {
+        println!("{}", center_text("** NONE **".to_string()));
+    }
+}
+
+fn thin_reservations(instances: &Vec<Instance>, reservations: &mut Vec<ReservedInstances>) -> (Vec<String>, Vec<String>) {
     // The idea of this function is to remove single reservations as each instance "consumes"
     // them, leaving the reservations vec containing only unused reservations.
 
     let mut uncovered: Vec<String> = Vec::new();
+    let mut covered: Vec<String> = Vec::new();
 
     'instances: for instance in instances.iter().by_ref() {
         // Find a reservation that applies to this instance.
@@ -118,6 +131,7 @@ fn thin_reservations(instances: &Vec<Instance>, reservations: &mut Vec<ReservedI
 
                 if reservation.instance_count.unwrap() > 0 {
                     reservation.instance_count = Some(reservation.instance_count.unwrap() - 1);
+                    covered.push(instance.instance_id.as_ref().unwrap().clone());
                     continue 'instances;
                 }
                 // else continue the next reservation.
@@ -131,7 +145,7 @@ fn thin_reservations(instances: &Vec<Instance>, reservations: &mut Vec<ReservedI
     // Retain instances in the reservations vec with counts > 0
     reservations.retain(|x| x.instance_count.unwrap() > 0);
 
-    uncovered
+    (covered, uncovered)
 }
 
 fn dump_model_tabular(model: &CalculationModel) {
