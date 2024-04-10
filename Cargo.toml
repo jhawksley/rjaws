@@ -1,6 +1,6 @@
 [package]
 name = "rjaws"
-version = "3.1.1-REL"
+version = "3.1.2"
 edition = "2021"
 
 [[bin]]
@@ -24,6 +24,7 @@ chrono = "0.4.35"
 serde_json = "1.0"
 num-format = "0.4"
 terminal_size = "0.2"
+sprintf = "0.2.1"
 
 # AWS Dependencies
 aws-config = "1.1"
