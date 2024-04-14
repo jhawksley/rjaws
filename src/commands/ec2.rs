@@ -2,23 +2,25 @@ use async_trait::async_trait;
 use aws_sdk_ec2::types::Instance;
 
 use crate::aws_handler::AWSHandler;
-use crate::commands::{Command, notify_clear, notify_comms, notify_working};
+use crate::commands::{Command};
 use crate::errors::jaws_error::JawsError;
 use crate::models::ec2_instance::EC2Instance;
 use crate::Options;
 use crate::tabulatable::Tabulatable;
-use crate::textutils::txt_line_output;
+use crate::textutils::Textutil;
 
 pub struct EC2Command {
     instances: Vec<EC2Instance>,
     instance_filter: Option<Vec<String>>,
+    textutil: Textutil
 }
 
 impl EC2Command {
-    pub fn new() -> Self {
+    pub fn new(options: &Options) -> Self {
         Self {
             instances: Vec::new(),
             instance_filter: None,
+            textutil: Textutil::new(options)
         }
     }
 
@@ -34,24 +36,24 @@ impl Command for EC2Command {
         let mut handler = AWSHandler::new(options).await;
 
         // Update the user we're talking to AWS
-        notify_comms(Some("checking caller ID".to_string()));
+        self.textutil.notify_comms(Some("checking caller ID".to_string()));
 
         // Assert we can actually log in.
         handler.sts_get_caller_identity().await?;
 
-        notify_comms(Some("getting instances".to_string()));
+        self.textutil.notify_comms(Some("getting instances".to_string()));
         // Get all EC2 instances and run them through Tabled for output
         match handler.ec2_get_all().await {
             Ok(instances) => {
                 if instances.len() == 0 {
-                    txt_line_output("No instances found.\n".to_string());
+                    self.textutil.txt_line_output("No instances found.\n".to_string());
                 } else {
                     // Convert the AWS instances to our own type
-                    notify_working();
+                    self.textutil.notify_working();
                     self.instances = to_ec2instances(instances, options.wide, &mut handler,
                                                      &self.instance_filter).await;
                     self.instances.sort_by_key(|i| i.get_name());
-                    notify_clear();
+                    self.textutil.notify_clear();
                     (self as &dyn Tabulatable).tabulate(options.wide);
                 }
                 Ok(())

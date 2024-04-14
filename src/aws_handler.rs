@@ -13,9 +13,9 @@ use aws_sdk_sts;
 use aws_sdk_sts::operation::get_caller_identity::GetCallerIdentityOutput;
 use serde_json::Value;
 
-use crate::commands::notify_comms;
 use crate::errors::jaws_error::JawsError;
 use crate::Options;
+use crate::textutils::Textutil;
 
 const TYPE_BATCH_SIZE: i32 = 100;
 
@@ -25,25 +25,23 @@ pub struct AWSHandler {
     specmap: HashMap<String, String>,
     odm_rate_cache: HashMap<InstanceType, f32>,
     region: Option<String>,
+    textutil: Textutil,
 }
 
-
-impl Default for AWSHandler {
-    fn default() -> Self {
-        Self {
-            instance_profile_cache: HashMap::new(),
-            instance_profile_ssm_mapping_cache: HashMap::new(),
-            odm_rate_cache: HashMap::new(),
-            specmap: HashMap::new(),
-            region: None,
-        }
-    }
-}
 
 impl AWSHandler {
     /// Get a new handler, primed with any optional elements.
     pub async fn new(options: &Options) -> Self {
-        let mut handler = AWSHandler::default();
+        println!("new aws handler");
+        let mut handler = AWSHandler {
+            instance_profile_cache: HashMap::new(),
+            instance_profile_ssm_mapping_cache: HashMap::new(),
+            specmap: HashMap::new(),
+            odm_rate_cache: HashMap::new(),
+            region: None,
+            textutil: Textutil::new(options),
+        };
+        // Load the region from options, if Some.  If None, load using AWS defaulting.
         handler.region = match &options.region {
             None => Some(aws_config::load_defaults(BehaviorVersion::latest()).await.region().unwrap().to_string()),
             Some(region) => Some(region.to_string()),
@@ -102,7 +100,7 @@ impl AWSHandler {
             aws_sdk_iam::Client::new(&aws_config::load_defaults(BehaviorVersion::latest()).await);
 
         if self.instance_profile_cache.len() == 0 {
-            notify_comms(Some("filling Instance Profile cache".to_string()));
+            self.textutil.notify_comms(Some("filling Instance Profile cache".to_string()));
             for ip in client
                 .list_instance_profiles()
                 .send()
@@ -132,7 +130,7 @@ impl AWSHandler {
         // no...
 
         // Check whether the instance has policy AmazonSSMManagedInstanceCore in its role
-        notify_comms(Some(format!(
+        self.textutil.notify_comms(Some(format!(
             "getting IAM role information {:?}",
             instance.iam_instance_profile().unwrap().id().unwrap()
         )));
@@ -305,7 +303,7 @@ impl AWSHandler {
         let mut loaded: usize = 0;
 
         loop {
-            notify_comms(Some(
+            self.textutil.notify_comms(Some(
                 format!("getting instance types [{}]", loaded).to_string(),
             ));
 

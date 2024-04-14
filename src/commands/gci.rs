@@ -1,9 +1,10 @@
 use async_trait::async_trait;
 
 use crate::aws_handler::AWSHandler;
-use crate::commands::{Command, notify_clear, notify_comms};
+use crate::commands::{Command};
 use crate::errors::jaws_error::JawsError;
 use crate::Options;
+use crate::textutils::Textutil;
 
 pub struct GCICommand;
 
@@ -11,14 +12,15 @@ pub struct GCICommand;
 impl Command for GCICommand
 {
     async fn run(&mut self, options: &mut Options) -> Result<(), JawsError> {
+        let textutil = Textutil::new(options);
 
-        notify_comms(None);
+        textutil.notify_comms(None);
         let handler: AWSHandler = AWSHandler::new(options).await;
 
         let id = handler.sts_get_caller_identity();
         let identity_result = id.await;
 
-        notify_clear();
+        textutil.notify_clear();
 
         match identity_result {
             Ok(identity) => {

@@ -2,19 +2,18 @@ use async_trait::async_trait;
 use aws_sdk_ec2::types::{Instance, RecurringCharge, RecurringChargeFrequency, ReservedInstances};
 use aws_smithy_types_convert::date_time::DateTimeExt;
 use chrono::{DateTime, Utc};
+use sprintf::sprintf;
 use tabled::settings::Alignment;
 use tabled::settings::object::Columns;
 use tabled::Table;
-use sprintf::sprintf;
-
 
 use crate::{Options, SubCommands};
 use crate::aws_handler::AWSHandler;
-use crate::commands::{Command, notify_clear, notify_comms, notify_working};
+use crate::commands::Command;
 use crate::commands::ec2::EC2Command;
 use crate::errors::jaws_error::JawsError;
 use crate::tabulatable::Tabulatable;
-use crate::textutils::{center_text, report_title};
+use crate::textutils::Textutil;
 
 const SECONDS_PER_YEAR: i32 = 60 * 60 * 24 * 365;
 const HOURS_PER_YEAR: i32 = 24 * 365;
@@ -34,7 +33,9 @@ impl Command for ResCommand
     async fn run(&mut self, options: &mut Options) -> Result<(), JawsError> {
         let mut handler = AWSHandler::new(options).await;
 
-        notify_comms(Some("Getting reservation data".to_string()));
+        let textutil = Textutil::new(options);
+
+        textutil.notify_comms(Some("Getting reservation data".to_string()));
 
         // Get all reservations
 
@@ -50,47 +51,43 @@ impl Command for ResCommand
         // Otherwise we have a good list of reservations.
 
         if reservations.len() == 0 {
-            notify_clear();
+            textutil.notify_clear();
             println!("No active reservations found.");
             return Ok(());
         }
 
-        // Create a model now which will support output in tabular form, the same as Jaws-1,
-        // and also as a one-shot Prometheus output type, which can be consumed and sent to
-        // Otel.
+        // Create a model now which will support output in tabular form, the same as Jaws-1.
 
-        notify_working();
+        textutil.notify_working();
         let model = calculate_model(&reservations, &mut handler).await;
-        notify_clear();
+        textutil.notify_clear();
 
         // .. and output it
-        report_title(format!("EC2 Reservations ({})", model.elements.len()));
+        textutil.report_title(format!("EC2 Reservations ({})", model.elements.len()));
         dump_model_tabular(&model);
 
         // If --show-unused is present, get all EC2 instances and thin out the reservations.
 
-        if let SubCommands::RES { show_unused } = options.subcommand {
-            if show_unused {
-                let mut instance_result = handler.ec2_get_all().await?;
-                // remove Terminated instances for this command.
-                instance_result.retain(|x| x.state().unwrap().name().unwrap().as_str() == "running");
-                let (covered_instances, uncovered_instances) = thin_reservations(&instance_result, &mut reservations);
+        if let SubCommands::RES { show_unused: true } = options.subcommand {
+            let mut instance_result = handler.ec2_get_all().await?;
 
-                // Calculate and dump the unused reservations  (or a "none" string if there aren't any).
-                let unused_model = calculate_model(&reservations, &mut handler).await;
+            // remove Terminated instances for this command.
+            instance_result.retain(|x| x.state().unwrap().name().unwrap().as_str() == "running");
+            let (covered_instances, uncovered_instances) = thin_reservations(&instance_result, &mut reservations);
 
-                println!();
-                report_title(format!("Unused EC2 Reservations ({})", unused_model.elements.len()));
-                if reservations.len() > 0 {
-                    dump_model_tabular(&unused_model);
-                } else {
-                    println!("{}", center_text("** NONE **".to_string()));
-                }
+            // Calculate and dump the unused reservations  (or a "none" string if there aren't any).
+            let unused_model = calculate_model(&reservations, &mut handler).await;
 
-                output_table(uncovered_instances, "Uncovered EC2 Instances (%d)", options).await;
-                output_table(covered_instances, "Covered EC2 Instances (%d)", options).await;
-
+            println!();
+            textutil.report_title(format!("Unused EC2 Reservations ({})", unused_model.elements.len()));
+            if reservations.len() > 0 {
+                dump_model_tabular(&unused_model);
+            } else {
+                println!("{}", textutil.center_text("** NONE **".to_string()));
             }
+
+            output_table(uncovered_instances, "Uncovered EC2 Instances (%d)", options, &textutil).await;
+            output_table(covered_instances, "Covered EC2 Instances (%d)", options, &textutil).await;
         }
 
         Ok(())
@@ -98,20 +95,21 @@ impl Command for ResCommand
 }
 
 
-async fn output_table(instances: Vec<String>, title: &str, options: &mut Options) {
+async fn output_table(instances: Vec<String>, title: &str, options: &mut Options, textutil: &Textutil) {
 
     // Output the uncovered instances, if there are any.
     println!();
-    report_title(sprintf!(title, instances.len()).unwrap());
+    textutil.report_title(sprintf!(title, instances.len()).unwrap());
 
     if instances.len() > 0 {
-        let mut ec2_command: EC2Command = EC2Command::new();
+        let mut ec2_command: EC2Command = EC2Command::new(options);
         options.wide = true;
         ec2_command.run_with_filter(instances, options).await;
     } else {
-        println!("{}", center_text("** NONE **".to_string()));
+        println!("{}", textutil.center_text("** NONE **".to_string()));
     }
 }
+
 
 fn thin_reservations(instances: &Vec<Instance>, reservations: &mut Vec<ReservedInstances>) -> (Vec<String>, Vec<String>) {
     // The idea of this function is to remove single reservations as each instance "consumes"
