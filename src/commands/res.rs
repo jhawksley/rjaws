@@ -86,7 +86,7 @@ impl Command for ResCommand
                 println!("{}", textutil.center_text("** NONE **".to_string()));
             }
 
-            let mut ec2_command = EC2Command::new(&options);
+            let mut ec2_command = EC2Command::new(&options).await;
 
             output_table(uncovered_instances, "Uncovered EC2 Instances (%d)", options, &textutil, &mut ec2_command).await;
             output_table(covered_instances, "Covered EC2 Instances (%d)", options, &textutil, &mut ec2_command).await;

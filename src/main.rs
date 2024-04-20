@@ -86,7 +86,7 @@ async fn main() {
 
     // Switch based on the selected subcommand
     let command: Option<Box<dyn Command>> = match &options.subcommand {
-        SubCommands::EC2 => Some(Box::new(commands::ec2::EC2Command::new(&options))),
+        SubCommands::EC2 => Some(Box::new(commands::ec2::EC2Command::new(&options).await)),
         SubCommands::GCI => Some(Box::new(commands::gci::GCICommand)),
         SubCommands::SSM { instance_id: _ } => {
             Some(Box::new(commands::ssm::SSMCommand::new()))

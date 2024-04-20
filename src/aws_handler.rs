@@ -19,6 +19,9 @@ use crate::textutils::Textutil;
 
 const TYPE_BATCH_SIZE: i32 = 100;
 
+/// This type contains low-level functionality for handling AWS calls.  Several datasets
+/// are cached, therefore clients should prefer to reuse this type, rather than reinstantiating
+/// it.
 pub struct AWSHandler {
     instance_profile_cache: HashMap<String, InstanceProfile>,
     instance_profile_ssm_mapping_cache: HashMap<String, bool>,
@@ -32,7 +35,6 @@ pub struct AWSHandler {
 impl AWSHandler {
     /// Get a new handler, primed with any optional elements.
     pub async fn new(options: &Options) -> Self {
-        println!("!! NEW HANDLER");
         let mut handler = AWSHandler {
             instance_profile_cache: HashMap::new(),
             instance_profile_ssm_mapping_cache: HashMap::new(),
