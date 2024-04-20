@@ -86,8 +86,10 @@ impl Command for ResCommand
                 println!("{}", textutil.center_text("** NONE **".to_string()));
             }
 
-            output_table(uncovered_instances, "Uncovered EC2 Instances (%d)", options, &textutil).await;
-            output_table(covered_instances, "Covered EC2 Instances (%d)", options, &textutil).await;
+            let mut ec2_command = EC2Command::new(&options);
+
+            output_table(uncovered_instances, "Uncovered EC2 Instances (%d)", options, &textutil, &mut ec2_command).await;
+            output_table(covered_instances, "Covered EC2 Instances (%d)", options, &textutil, &mut ec2_command).await;
         }
 
         Ok(())
@@ -95,14 +97,13 @@ impl Command for ResCommand
 }
 
 
-async fn output_table(instances: Vec<String>, title: &str, options: &mut Options, textutil: &Textutil) {
+async fn output_table(instances: Vec<String>, title: &str, options: &mut Options, textutil: &Textutil, ec2_command: &mut EC2Command) {
 
     // Output the uncovered instances, if there are any.
     println!();
     textutil.report_title(sprintf!(title, instances.len()).unwrap());
 
     if instances.len() > 0 {
-        let mut ec2_command: EC2Command = EC2Command::new(options);
         options.wide = true;
         ec2_command.run_with_filter(instances, options).await;
     } else {

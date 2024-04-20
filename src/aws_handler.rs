@@ -32,7 +32,7 @@ pub struct AWSHandler {
 impl AWSHandler {
     /// Get a new handler, primed with any optional elements.
     pub async fn new(options: &Options) -> Self {
-        println!("new aws handler");
+        println!("!! NEW HANDLER");
         let mut handler = AWSHandler {
             instance_profile_cache: HashMap::new(),
             instance_profile_ssm_mapping_cache: HashMap::new(),
