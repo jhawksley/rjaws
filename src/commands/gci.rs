@@ -1,9 +1,10 @@
 use async_trait::async_trait;
 
 use crate::aws_handler::AWSHandler;
-use crate::commands::{Command};
 use crate::errors::jaws_error::JawsError;
 use crate::Options;
+use crate::t_command::Command;
+use crate::matrix_output::MatrixOutput;
 use crate::textutils::Textutil;
 
 pub struct GCICommand;
@@ -33,5 +34,9 @@ impl Command for GCICommand
                 Err(e)
             }
         }
+    }
+
+    fn get_matrix_output(&self) -> Option<MatrixOutput> {
+        None
     }
 }

@@ -9,10 +9,11 @@ use tabled::Table;
 
 use crate::{Options, SubCommands};
 use crate::aws_handler::AWSHandler;
-use crate::commands::Command;
 use crate::commands::ec2::EC2Command;
 use crate::errors::jaws_error::JawsError;
-use crate::tabulatable::Tabulatable;
+use crate::t_command::Command;
+use crate::matrix_output::MatrixOutput;
+use crate::t_tabulatable::Tabulatable;
 use crate::textutils::Textutil;
 
 const SECONDS_PER_YEAR: i32 = 60 * 60 * 24 * 365;
@@ -53,7 +54,7 @@ impl Command for ResCommand
         if reservations.len() == 0 {
             textutil.notify_clear();
             println!("No active reservations found.");
-            return Ok(());
+            return Ok(()); // TODO MATRIX
         }
 
         // Create a model now which will support output in tabular form, the same as Jaws-1.
@@ -93,6 +94,10 @@ impl Command for ResCommand
         }
 
         Ok(())
+    }
+
+    fn get_matrix_output(&self) -> Option<MatrixOutput> {
+        None // TODO Matrix
     }
 }
 

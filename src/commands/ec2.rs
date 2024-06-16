@@ -2,11 +2,12 @@ use async_trait::async_trait;
 use aws_sdk_ec2::types::Instance;
 
 use crate::aws_handler::AWSHandler;
-use crate::commands::{Command};
 use crate::errors::jaws_error::JawsError;
 use crate::models::ec2_instance::EC2Instance;
 use crate::Options;
-use crate::tabulatable::Tabulatable;
+use crate::t_command::Command;
+use crate::matrix_output::MatrixOutput;
+use crate::t_tabulatable::Tabulatable;
 use crate::textutils::Textutil;
 
 /// Run an EC2 command.  This type may also be called internally by other commands or
@@ -60,10 +61,14 @@ impl Command for EC2Command {
                     self.textutil.notify_clear();
                     (self as &dyn Tabulatable).tabulate(options.wide);
                 }
-                Ok(())
+                Ok(()) // TODO MATRIX
             }
             Err(e) => Err(e)
         }
+    }
+
+    fn get_matrix_output(&self) -> Option<MatrixOutput> {
+        None //TODO Matrix
     }
 }
 

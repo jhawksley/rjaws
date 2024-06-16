@@ -1,5 +1,4 @@
 use std::io::{stdout, Write};
-use std::process;
 use std::string::ToString;
 
 use clap::Parser;
@@ -8,8 +7,9 @@ use termion::clear::CurrentLine;
 
 use e_output_format::OutputFormat;
 
-use crate::commands::Command;
+use t_command::Command;
 use crate::errors::jaws_error::JawsError;
+use crate::matrix_output::{Matrix, MatrixOutput};
 
 pub const VERSION: &str = env!("CARGO_PKG_VERSION");
 
@@ -17,9 +17,11 @@ mod aws_handler;
 mod commands;
 mod errors;
 mod models;
-mod tabulatable;
+mod t_tabulatable;
 mod textutils;
 mod e_output_format;
+mod matrix_output;
+mod t_command;
 
 const LONG_ABOUT_TPL: &str = "JAWS - Nicer(ish) ways of interacting with AWS.\n\
                               John Hawksley <john@hawksley.net>\n\
@@ -45,7 +47,6 @@ pub struct Options {
     region: Option<String>,
 
     /// Output format for commands which support it
-    // #[clap(short, long, global = true, default_value_t = Some(OutputFormat::Tabular))]
     #[clap(short, long, global = true, default_value = "tabular")]
     pub output_format: Option<OutputFormat>,
 
@@ -75,6 +76,9 @@ enum SubCommands {
         #[clap(short, long, default_value_t = false)]
         show_unused: bool
     },
+
+    /// Generate some sample matrices for testing
+    MTC,
 }
 
 // Main: starts here. We need tokio because the AWS libraries need it.
@@ -92,23 +96,30 @@ async fn main() {
             Some(Box::new(commands::ssm::SSMCommand::new()))
         }
         SubCommands::RES { show_unused: _ } => Some(Box::new(commands::res::ResCommand::new())),
+        SubCommands::MTC => Some(Box::new(commands::matrix_test_command::MatrixTestCommand{}))
     };
 
     match command {
         Some(mut c) => {
             match c.run(&mut options).await {
-                Ok(_) => {} // Success - command ran to completion
-                Err(e) => handle_and_abort(e),
+                Ok(ok) => {
+                    // Command ran to completion.  Check whether it requires Matrix Output
+                    // to be decoded and output.
+                    if( c.get_matrix_output().is_some() ) {
+                        handle_matrix_output(c.get_matrix_output().unwrap())
+                    }
+                }
+                Err(e) => handle_and_panic(e),
             }
         }
-        None => handle_and_abort(JawsError::new(format!(
+        None => handle_and_panic(JawsError::new(format!(
             "Command '{:?}' not found",
             options.subcommand
         ))),
     }
 }
 
-fn handle_and_abort(error: JawsError) {
+pub fn handle_and_panic(error: JawsError) -> ! {
     // This was a call to txt_line_clear, but since the rejig of text output, and the fact that
     // this function should probably have as few dependencies as possible, I've inlined it.
     print!("\r{}", CurrentLine);
@@ -117,11 +128,15 @@ fn handle_and_abort(error: JawsError) {
     // Output the abort
     println!(
         "{}\n\n{}\n",
-        "*** ABORT ***".red().bold().underline(),
-        "Software aborted with the following error:".red()
+        "*** PANIC ***".red().bold().underline(),
+        "Software panicked with the following error:".red()
     );
-    println!("{}", error.to_string().red());
+    println!("{}\n", error.to_string().red());
 
     // ... and halt with error.
-    process::exit(1);
+    panic!()
+}
+
+pub fn handle_matrix_output(matrix: MatrixOutput)  {
+    println!("WOULD HANDLE BOXED OUTPUT HERE");
 }

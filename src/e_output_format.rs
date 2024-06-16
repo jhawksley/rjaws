@@ -1,10 +1,8 @@
-// This file defines the output formats allowed for Jaws.
-
-// CLAP requires the implementation of various traits for custom enums, and this can get
-// rather nontrivial, so I've done it all here in its own file.
-
 use clap::ValueEnum;
 
+// This file defines the output formats allowed for Jaws.
+// CLAP requires the implementation of various traits for custom enums, and this can get
+// rather nontrivial, so I've done it all here in its own file.
 #[derive(Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Debug)]
 #[derive(clap::ValueEnum)]
 pub enum OutputFormat {
