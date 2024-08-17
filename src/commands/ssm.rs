@@ -8,7 +8,7 @@ use subprocess::PopenConfig;
 use crate::{Options, SubCommands};
 use crate::errors::jaws_error::JawsError;
 use crate::t_command::Command;
-use crate::matrix_output::MatrixOutput;
+use crate::matrix_handlers::t_matrix_output::MatrixOutput;
 use crate::textutils::Textutil;
 
 pub struct SSMCommand {}

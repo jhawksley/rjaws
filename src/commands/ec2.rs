@@ -1,12 +1,12 @@
 use async_trait::async_trait;
 use aws_sdk_ec2::types::Instance;
 
-use crate::aws_handler::AWSHandler;
+use crate::t_aws_handler::AWSHandler;
 use crate::errors::jaws_error::JawsError;
-use crate::models::ec2_instance::EC2Instance;
+use crate::t_ec2_instance::EC2Instance;
 use crate::Options;
 use crate::t_command::Command;
-use crate::matrix_output::MatrixOutput;
+use crate::matrix_handlers::t_matrix_output::MatrixOutput;
 use crate::t_tabulatable::Tabulatable;
 use crate::textutils::Textutil;
 

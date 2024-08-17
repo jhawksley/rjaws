@@ -7,21 +7,23 @@ use termion::clear::CurrentLine;
 
 use e_output_format::OutputFormat;
 
-use t_command::Command;
 use crate::errors::jaws_error::JawsError;
-use crate::matrix_output::{Matrix, MatrixOutput};
+use matrix_handlers::t_matrix_output::MatrixOutput;
+use matrix_handlers::t_matrix_output_driver::MatrixOutputDriver;
+use t_command::Command;
 
 pub const VERSION: &str = env!("CARGO_PKG_VERSION");
 
-mod aws_handler;
+mod t_aws_handler;
 mod commands;
 mod errors;
-mod models;
 mod t_tabulatable;
 mod textutils;
 mod e_output_format;
-mod matrix_output;
 mod t_command;
+mod t_ec2_instance;
+mod matrix_handlers;
+mod tui;
 
 const LONG_ABOUT_TPL: &str = "JAWS - Nicer(ish) ways of interacting with AWS.\n\
                               John Hawksley <john@hawksley.net>\n\
@@ -96,7 +98,7 @@ async fn main() {
             Some(Box::new(commands::ssm::SSMCommand::new()))
         }
         SubCommands::RES { show_unused: _ } => Some(Box::new(commands::res::ResCommand::new())),
-        SubCommands::MTC => Some(Box::new(commands::matrix_test_command::MatrixTestCommand{}))
+        SubCommands::MTC => Some(Box::new(commands::matrix_test_command::MatrixTestCommand {}))
     };
 
     match command {
@@ -105,8 +107,8 @@ async fn main() {
                 Ok(ok) => {
                     // Command ran to completion.  Check whether it requires Matrix Output
                     // to be decoded and output.
-                    if( c.get_matrix_output().is_some() ) {
-                        handle_matrix_output(c.get_matrix_output().unwrap())
+                    if (c.get_matrix_output().is_some()) {
+                        handle_matrix_output(options.output_format.unwrap(), c.get_matrix_output().unwrap())
                     }
                 }
                 Err(e) => handle_and_panic(e),
@@ -137,6 +139,8 @@ pub fn handle_and_panic(error: JawsError) -> ! {
     panic!()
 }
 
-pub fn handle_matrix_output(matrix: MatrixOutput)  {
-    println!("WOULD HANDLE BOXED OUTPUT HERE");
+pub fn handle_matrix_output(output_format: OutputFormat,
+                            matrix_output: MatrixOutput) {
+    let mut handler = MatrixOutputDriver {output_format, matrix_output};
+    handler.output();
 }

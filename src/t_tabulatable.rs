@@ -1,10 +1,12 @@
 use tabled::builder::Builder;
-use tabled::settings::{Alignment, Settings, Style, Width};
 use tabled::settings::object::Rows;
 use tabled::settings::peaker::PriorityMax;
+use tabled::settings::{Alignment, Settings, Style, Width};
 use tabled::Table;
 
 use crate::textutils::get_terminal_size;
+
+// TODO after conversion to matrix - delete this type.
 
 pub trait Tabulatable {
     fn get_table_headers(&self, extended: bool) -> Vec<String>;
@@ -28,8 +30,10 @@ pub trait Tabulatable {
         // Enlarge to term width
         let (width, _height) = get_terminal_size();
 
+        //        Width::wrap(width).priority(PriorityMax),
+
         let term_size_settings = Settings::default()
-            .with(Width::wrap(width).priority::<PriorityMax>())
+            .with(Width::wrap(width).priority(PriorityMax))
             .with(Width::increase(width));
 
         let mut builder = builder.build();
@@ -43,7 +47,7 @@ pub trait Tabulatable {
         table.modify(Rows::first(), Alignment::center());
 
         // Allow the subtype to modify the table prior to printing, to apply any formatting etc.
-        self.modify( table );
+        self.modify(table);
 
         // Print the table
         println!("{table}");

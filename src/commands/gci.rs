@@ -1,10 +1,10 @@
 use async_trait::async_trait;
 
-use crate::aws_handler::AWSHandler;
+use crate::t_aws_handler::AWSHandler;
 use crate::errors::jaws_error::JawsError;
 use crate::Options;
 use crate::t_command::Command;
-use crate::matrix_output::MatrixOutput;
+use crate::matrix_handlers::t_matrix_output::MatrixOutput;
 use crate::textutils::Textutil;
 
 pub struct GCICommand;

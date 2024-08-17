@@ -1,7 +1,7 @@
 use async_trait::async_trait;
 use crate::errors::jaws_error::JawsError;
 use crate::Options;
-use crate::matrix_output::MatrixOutput;
+use crate::matrix_handlers::t_matrix_output::MatrixOutput;
 
 /// This trait defines the interface which describes a CLI command.
 #[async_trait]
