@@ -28,12 +28,12 @@ pub struct MatrixFooter {
 /// A coherent set of data for output.
 pub struct Matrix {
     /// May contain line breaks; some output formats may render these as an array.
-    pub header: Vec<String>,
+    pub header: Option<Vec<String>>,
 
     /// Row data can be any type that implements Display, hence it needs to be Boxed, since
     /// Display is a trait and the size of the underlying object cannot be known at compile-time.
     /// Jagged rows are not allowed.  If a cell is not filled, the Option should be None.
-    pub rows: Vec<Vec<Option<Box<dyn Display>>>>,
+    pub rows: Option<Vec<Vec<Option<Box<dyn Display>>>>>,
 
     /// Aggregate rows are data that appear at the end of a table which are computed by some
     /// calculation of that table, e.g. column totals.  They are generated separately.

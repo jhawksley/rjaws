@@ -75,8 +75,10 @@ impl TabularOutput {
     }
 
     pub(crate) fn output_matrix(&self, matrix: &Matrix) {
-        for header in &matrix.header {
-            println!("{}", tui_center_text(header));
+        if matrix.header.is_some() {
+            for header in matrix.header.as_ref().unwrap() {
+                println!("{}\n", tui_center_text(header));
+            }
         }
 
         let (width, _height) = get_terminal_size();
@@ -100,37 +102,39 @@ impl TabularOutput {
 
         let mut builder = Builder::default();
 
-        for row in &matrix.rows {
-            // Push all rows
-            let mut cells: Vec<String> = Vec::new();
-            for cell in row {
-                cells.push(match cell {
-                    Some(T) => T.to_string(),
-                    None => String::new(),
-                });
+        if matrix.rows.is_some()
+        {
+            for row in matrix.rows.as_ref().unwrap() {
+                // Push all rows
+                let mut cells: Vec<String> = Vec::new();
+                for cell in row {
+                    cells.push(match cell {
+                        Some(T) => T.to_string(),
+                        None => String::new(),
+                    });
+                }
+                builder.push_record(cells);
             }
-            builder.push_record(cells);
+
+            let mut table = builder.build();
+            let mut table = table
+                .with(Style::rounded())
+                .with(term_size_settings.clone());
+
+            if (matrix.first_rows_header) {
+                // table.modify(Rows::first(), Alignment::center());
+                // Experimental - try it out and see if it works
+                table.with(Style::rounded().remove_horizontals()).with(ColumnNames::default());
+            } else {
+                table.with(Style::rounded().remove_horizontals());
+            }
+
+            println!("{table}")
         }
-
-        let mut table = builder.build();
-        let mut table = table
-            .with(Style::rounded())
-            .with(term_size_settings.clone());
-
-        if (matrix.first_rows_header) {
-            // table.modify(Rows::first(), Alignment::center());
-            // Experimental - try it out and see if it works
-            table.with(Style::modern()).with(ColumnNames::default());
-        } else {
-            table.with(Style::rounded().remove_horizontals());
-        }
-
-        println!("{table}")
     }
 
     fn output_matrix_aggregate_table(&self, matrix: &Matrix, term_size_settings: &Settings<Settings<Settings, Wrap<usize, PriorityMax>>, MinWidth>) {
         let mut builder = Builder::default();
-
 
         for row in matrix.aggregate_rows.as_ref().unwrap() {
             builder.push_record([&row.name, &row.value.to_string()])

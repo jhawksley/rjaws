@@ -1,14 +1,15 @@
 use async_trait::async_trait;
 use aws_sdk_ec2::types::Instance;
+use std::fmt::Display;
 
-use crate::t_aws_handler::AWSHandler;
 use crate::errors::jaws_error::JawsError;
-use crate::t_ec2_instance::EC2Instance;
-use crate::Options;
+use crate::matrix_handlers::t_matrix_output::{Matrix, MatrixAggregateValue, MatrixFooter, MatrixHeader, MatrixOutput};
+use crate::t_aws_handler::AWSHandler;
 use crate::t_command::Command;
-use crate::matrix_handlers::t_matrix_output::MatrixOutput;
+use crate::t_ec2_instance::EC2Instance;
 use crate::t_tabulatable::Tabulatable;
 use crate::textutils::Textutil;
+use crate::Options;
 
 /// Run an EC2 command.  This type may also be called internally by other commands or
 /// functionality.  This type creates its own `AWSHandler`, which itself caches various
@@ -19,6 +20,7 @@ pub struct EC2Command {
     instance_filter: Option<Vec<String>>,
     textutil: Textutil,
     handler: AWSHandler,
+    extended_output: bool,
 }
 
 impl EC2Command {
@@ -27,13 +29,101 @@ impl EC2Command {
             instances: Vec::new(),
             instance_filter: None,
             textutil: Textutil::new(options),
-            handler: AWSHandler::new(options).await
+            handler: AWSHandler::new(options).await,
+            extended_output: options.wide,
         }
     }
 
     pub(crate) async fn run_with_filter(&mut self, instances: Vec<String>, options: &mut Options) {
         self.instance_filter = Some(instances);
         _ = self.run(options).await;
+    }
+
+    fn generate_matrix(&self) -> Matrix {
+        let standard_header = vec!["foo".to_string()];
+        let extended_header = vec!["bar".to_string()];
+
+        // Header
+        let mut header: Vec<Option<Box<dyn Display>>> = Vec::new();
+        header.push(Some(Box::new("Instance ID".to_string())));
+        header.push(Some(Box::new("Name".to_string())));
+        header.push(Some(Box::new("Status".to_string())));
+        header.push(Some(Box::new("Public IP".to_string())));
+        header.push(Some(Box::new("Private IP".to_string())));
+
+        if self.extended_output {
+            header.push(Some(Box::new("SSM".to_string())));
+            header.push(Some(Box::new("AZ".to_string())));
+            header.push(Some(Box::new("Type".to_string())));
+            header.push(Some(Box::new("Spec".to_string())));
+        }
+
+        // Generate row data
+        let mut main_rows: Vec<Vec<Option<Box<dyn Display>>>> = Vec::new();
+        main_rows.push(header);
+
+        // Aggregate
+        let mut cpu_tot = 0;
+        let mut mem_tot = 0;
+
+        for instance in &self.instances {
+            let mut row: Vec<Option<Box<dyn Display>>> = Vec::new();
+
+            row.push(Some(Box::new(instance.instance.instance_id.clone().unwrap().to_string())));
+            row.push(Some(Box::new(instance.get_name())));
+            row.push(Some(Box::new(instance.instance.state.clone().unwrap().name.unwrap().to_string())));
+            row.push(Some(Box::new(instance.instance.public_ip_address.clone().unwrap_or("None".to_string()).to_string())));
+            row.push(Some(Box::new(instance.instance.private_ip_address.clone().unwrap().to_string())));
+
+            if self.extended_output {
+                row.push(Some(Box::new(match instance.ssm {
+                    None => { "-".to_string() }
+                    Some(ssm) => {
+                        match ssm {
+                            true => { "Yes".to_string() }
+                            false => { "No".to_string() }
+                        }
+                    }
+                })));
+                row.push(Some(Box::new(instance.az.clone().unwrap_or("Unknown".to_string()))));
+                row.push(Some(Box::new(instance.instance_type.clone().unwrap_or("Unknown".to_string()))));
+
+                let spec = instance.spec.clone();
+
+                if spec.is_some() {
+                    let mut parts = spec.as_ref().unwrap().split("/");
+                    cpu_tot = cpu_tot + parts.next().unwrap().parse::<i32>().unwrap();
+                    mem_tot = mem_tot + parts.next().unwrap().parse::<i32>().unwrap();
+                }
+
+                row.push(Some(Box::new(spec.unwrap_or("Unknown".to_string()))));
+            }
+
+            main_rows.push(row);
+        }
+
+        // Aggregate rows
+
+        //    pub aggregate_rows: Option<Vec<MatrixAggregateValue>>,
+        let mut aggregate_rows: Vec<MatrixAggregateValue> = Vec::new();
+        aggregate_rows.push(MatrixAggregateValue {
+            name: "Fleet CPU Total".to_string(),
+            value: Box::new(cpu_tot.to_string()),
+        });
+        aggregate_rows.push(MatrixAggregateValue {
+            name: "Fleet Memory Total".to_string(),
+            value: Box::new(mem_tot.to_string()),
+        });
+
+        // Return the completed matrix.
+
+        Matrix {
+            header: Some(vec!["Instance Inventory".to_string()]),
+            rows: Some(main_rows),
+            aggregate_rows: Some(aggregate_rows),
+            notes: None,
+            first_rows_header: true,
+        }
     }
 }
 
@@ -59,7 +149,7 @@ impl Command for EC2Command {
                                                      &self.instance_filter).await;
                     self.instances.sort_by_key(|i| i.get_name());
                     self.textutil.notify_clear();
-                    (self as &dyn Tabulatable).tabulate(options.wide);
+                    // (self as &dyn Tabulatable).tabulate(options.wide);
                 }
                 Ok(()) // TODO MATRIX
             }
@@ -68,9 +158,16 @@ impl Command for EC2Command {
     }
 
     fn get_matrix_output(&self) -> Option<MatrixOutput> {
-        None //TODO Matrix
+        Some(
+            MatrixOutput {
+                matrix_header: Some(MatrixHeader { title: Some("EC2".to_string()), output_program_header: true }),
+                matrix_footer: Some(MatrixFooter { footer: None, output_program_footer: true }),
+                matrices: vec![self.generate_matrix()],
+            }
+        )
     }
 }
+
 
 /// Convert a vector of AWS SDK EC2 instances into a vector of
 /// Tabled (printable) instances.  If the `wide` option is in force,

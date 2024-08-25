@@ -1,3 +1,4 @@
+use std::fmt::Display;
 use crate::errors::jaws_error::JawsError;
 use crate::matrix_handlers::t_matrix_output::{Matrix, MatrixAggregateValue, MatrixFooter, MatrixHeader, MatrixOutput};
 use crate::t_command::Command;
@@ -20,11 +21,11 @@ impl Command for crate::commands::matrix_test_command::MatrixTestCommand
 impl MatrixTestCommand {
     fn generate_matrix_test_set(&self) -> MatrixOutput {
         let matrix = Matrix {
-            header: vec![String::from("The Matrix Title")],
+            header: Some(vec![String::from("The Matrix Title")]),
 
             // pub rows: Vec<Vec<Option<Box<dyn Display>>>>,
 
-            rows: vec![
+            rows: Some::<Vec<Vec<Option<Box<dyn Display>>>>> (vec![
                 vec![
                     Some(Box::new(String::from("Column A"))),
                     Some(Box::new(String::from("Column B"))),
@@ -45,7 +46,7 @@ impl MatrixTestCommand {
                     Some(Box::new(String::from("Arthur"))),
                     Some(Box::new(String::from("Trillian"))),
                 ],
-            ],
+            ]),
             //    pub aggregate_rows: Vec<Vec<MatrixAggregateValue>>,
             aggregate_rows: Some(
                 vec![
