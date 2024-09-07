@@ -50,6 +50,7 @@ impl EC2Command {
         header.push(Some(Box::new("Status".to_string())));
         header.push(Some(Box::new("Public IP".to_string())));
         header.push(Some(Box::new("Private IP".to_string())));
+        header.push(Some(Box::new("Spot".to_string())));
 
         if self.extended_output {
             header.push(Some(Box::new("SSM".to_string())));
@@ -74,6 +75,8 @@ impl EC2Command {
             row.push(Some(Box::new(instance.instance.state.clone().unwrap().name.unwrap().to_string())));
             row.push(Some(Box::new(instance.instance.public_ip_address.clone().unwrap_or("None".to_string()).to_string())));
             row.push(Some(Box::new(instance.instance.private_ip_address.clone().unwrap().to_string())));
+            let spot = instance.instance.spot_instance_request_id().is_some();
+            row.push(Some(Box::new(if spot { "Yes".to_string() } else { "No".to_string() })));
 
             if self.extended_output {
                 row.push(Some(Box::new(match instance.ssm {
@@ -149,9 +152,8 @@ impl Command for EC2Command {
                                                      &self.instance_filter).await;
                     self.instances.sort_by_key(|i| i.get_name());
                     self.textutil.notify_clear();
-                    // (self as &dyn Tabulatable).tabulate(options.wide);
                 }
-                Ok(()) // TODO MATRIX
+                Ok(())
             }
             Err(e) => Err(e)
         }
@@ -212,36 +214,4 @@ async fn to_ec2instances(instances: Vec<Instance>, extended: bool, handler: &mut
     }
 
     vec
-}
-
-impl Tabulatable for EC2Command {
-    fn get_table_headers(&self, extended: bool) -> Vec<String> {
-        let mut headers: Vec<String> = Vec::new();
-
-        headers.push("Instance ID".to_string());
-        headers.push("Name".to_string());
-        headers.push("State".to_string());
-        headers.push("Public IP".to_string());
-        headers.push("Private IP".to_string());
-
-        if extended {
-            // Add the wide fields
-            headers.push("SSM".to_string());
-            headers.push("AZ".to_string());
-            headers.push("Type".to_string());
-            headers.push("Spec".to_string());
-        }
-
-        headers
-    }
-
-    fn get_table_rows(&self, extended: bool) -> Vec<Vec<String>> {
-        let mut rows: Vec<Vec<String>> = Vec::new();
-
-        for instance in self.instances.iter() {
-            rows.push(instance.values(extended));
-        }
-
-        rows
-    }
 }
