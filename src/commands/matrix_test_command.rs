@@ -13,7 +13,7 @@ impl Command for crate::commands::matrix_test_command::MatrixTestCommand
         Ok(())
     }
 
-    fn get_matrix_output(&self) -> Option<MatrixOutput> {
+    fn get_matrix_output(&mut self) -> Option<MatrixOutput> {
         Some(self.generate_matrix_test_set())
     }
 }

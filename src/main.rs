@@ -107,8 +107,8 @@ async fn main() {
                 Ok(ok) => {
                     // Command ran to completion.  Check whether it requires Matrix Output
                     // to be decoded and output.
-                    if (c.get_matrix_output().is_some()) {
-                        handle_matrix_output(options.output_format.unwrap(), c.get_matrix_output().unwrap())
+                    if let Some(matrix_output) = c.get_matrix_output() {
+                        handle_matrix_output(options.output_format.unwrap(), matrix_output);
                     }
                 }
                 Err(e) => handle_and_panic(e),

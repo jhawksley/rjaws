@@ -13,5 +13,5 @@ pub trait Command {
     /// If a command returns `Some` here, it is signalling that the output routine should
     /// process the matrix output into whatever `--output-format` specifies.  The command
     /// should not perform any output of its own (including user update data) in this case.
-    fn get_matrix_output(&self) -> Option<MatrixOutput>;
+    fn get_matrix_output(&mut self) -> Option<MatrixOutput>;
 }

@@ -36,7 +36,7 @@ impl Command for GCICommand
         }
     }
 
-    fn get_matrix_output(&self) -> Option<MatrixOutput> {
+    fn get_matrix_output(&mut self) -> Option<MatrixOutput> {
         None
     }
 }

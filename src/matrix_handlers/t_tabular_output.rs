@@ -18,6 +18,7 @@ impl TrMatrixOutputHandler for TabularOutput {
     fn output(&mut self, matrix_output: &MatrixOutput) {
         self.output_header(&matrix_output.matrix_header);
         println!();
+        
         for matrix in &matrix_output.matrices {
             self.output_matrix(&matrix);
         }
@@ -62,7 +63,6 @@ impl TabularOutput {
             println!("{}", termion::style::Bold);
             println!("{}", tui_separator_bar("-"));
 
-
             if matrix_footer.as_ref().unwrap().output_program_footer {
                 println!("{}", tui_lcr_text(
                     Some(format!("{}", Utc::now().format("%Y-%m-%dT%H:%M:%SZ"))),
@@ -75,6 +75,7 @@ impl TabularOutput {
     }
 
     pub(crate) fn output_matrix(&self, matrix: &Matrix) {
+
         if matrix.header.is_some() {
             for header in matrix.header.as_ref().unwrap() {
                 println!("{}\n", tui_center_text(header));
@@ -104,6 +105,7 @@ impl TabularOutput {
 
         if matrix.rows.is_some()
         {
+
             for row in matrix.rows.as_ref().unwrap() {
                 // Push all rows
                 let mut cells: Vec<String> = Vec::new();

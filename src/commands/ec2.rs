@@ -3,11 +3,10 @@ use aws_sdk_ec2::types::Instance;
 use std::fmt::Display;
 
 use crate::errors::jaws_error::JawsError;
-use crate::matrix_handlers::t_matrix_output::{Matrix, MatrixAggregateValue, MatrixFooter, MatrixHeader, MatrixOutput};
+use crate::matrix_handlers::t_matrix_output::{Matrix, MatrixAggregateValue, MatrixFooter, MatrixHeader, MatrixOutput, MatrixRowT, MatrixRowsT};
 use crate::t_aws_handler::AWSHandler;
 use crate::t_command::Command;
 use crate::t_ec2_instance::EC2Instance;
-use crate::t_tabulatable::Tabulatable;
 use crate::textutils::Textutil;
 use crate::Options;
 
@@ -40,9 +39,6 @@ impl EC2Command {
     }
 
     fn generate_matrix(&self) -> Matrix {
-        let standard_header = vec!["foo".to_string()];
-        let extended_header = vec!["bar".to_string()];
-
         // Header
         let mut header: Vec<Option<Box<dyn Display>>> = Vec::new();
         header.push(Some(Box::new("Instance ID".to_string())));
@@ -60,7 +56,7 @@ impl EC2Command {
         }
 
         // Generate row data
-        let mut main_rows: Vec<Vec<Option<Box<dyn Display>>>> = Vec::new();
+        let mut main_rows: MatrixRowsT = Vec::new();
         main_rows.push(header);
 
         // Aggregate
@@ -107,7 +103,6 @@ impl EC2Command {
 
         // Aggregate rows
 
-        //    pub aggregate_rows: Option<Vec<MatrixAggregateValue>>,
         let mut aggregate_rows: Vec<MatrixAggregateValue> = Vec::new();
         aggregate_rows.push(MatrixAggregateValue {
             name: "Fleet CPU Total".to_string(),
@@ -159,7 +154,7 @@ impl Command for EC2Command {
         }
     }
 
-    fn get_matrix_output(&self) -> Option<MatrixOutput> {
+    fn get_matrix_output(&mut self) -> Option<MatrixOutput> {
         Some(
             MatrixOutput {
                 matrix_header: Some(MatrixHeader { title: Some("EC2".to_string()), output_program_header: true }),
