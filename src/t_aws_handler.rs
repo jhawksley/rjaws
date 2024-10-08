@@ -1,7 +1,6 @@
 // https://awslabs.github.io/aws-sdk-rust/
 
 use std::collections::HashMap;
-use std::process;
 
 use aws_config::{BehaviorVersion, Region};
 use aws_sdk_ec2;

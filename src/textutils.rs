@@ -38,18 +38,6 @@ impl Textutil {
         }
     }
 
-    pub fn report_title(&self, title: String) {
-        if !self.mute {
-            println!("{}", self.center_text(format!("J A W S - {}", crate::VERSION)));
-            println!("{}\n", self.center_text(title));
-        }
-    }
-
-    pub fn center_text(&self, text: String) -> String {
-        let (width, _) = get_terminal_size();
-        format!("{: ^width$}", text, width = width)
-    }
-
     // ---------------------------------------------------------------------------------------------
     // This is the moved version of the Command mod output driver
 

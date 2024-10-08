@@ -3,7 +3,7 @@ use aws_sdk_ec2::types::Instance;
 use std::fmt::Display;
 
 use crate::errors::jaws_error::JawsError;
-use crate::matrix_handlers::t_matrix_output::{Matrix, MatrixAggregateValue, MatrixFooter, MatrixHeader, MatrixOutput, MatrixRowT, MatrixRowsT};
+use crate::matrix_handlers::t_matrix_output::{Matrix, MatrixAggregateValue, MatrixFooter, MatrixHeader, MatrixOutput, MatrixRowsT};
 use crate::t_aws_handler::AWSHandler;
 use crate::t_command::Command;
 use crate::t_ec2_instance::EC2Instance;
@@ -103,6 +103,7 @@ impl EC2Command {
 
         // Aggregate rows
 
+        
         let mut aggregate_rows: Vec<MatrixAggregateValue> = Vec::new();
         aggregate_rows.push(MatrixAggregateValue {
             name: "Fleet CPU Total".to_string(),
@@ -197,7 +198,6 @@ async fn to_ec2instances(instances: Vec<Instance>, extended: bool, handler: &mut
         if filter.is_none() ||
             (filter.is_some() && filter.as_ref().unwrap().contains(&instance.instance_id.as_ref().unwrap())) {
             vec.push(EC2Instance {
-                is_extended: extended,
                 instance,
                 // Extended types
                 ssm,

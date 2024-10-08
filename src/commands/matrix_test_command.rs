@@ -9,7 +9,7 @@ pub struct MatrixTestCommand {}
 #[async_trait]
 impl Command for crate::commands::matrix_test_command::MatrixTestCommand
 {
-    async fn run(&mut self, options: &mut Options) -> Result<(), JawsError> {
+    async fn run(&mut self, _: &mut Options) -> Result<(), JawsError> {
         Ok(())
     }
 

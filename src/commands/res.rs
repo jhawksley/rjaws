@@ -4,21 +4,15 @@ use aws_smithy_types_convert::date_time::DateTimeExt;
 use chrono::{DateTime, Utc};
 use rust_decimal::prelude::*;
 use rusty_money::{iso, Money, Round};
-use sprintf::sprintf;
 use std::fmt::Display;
-use tabled::settings::object::Columns;
-use tabled::settings::Alignment;
-use tabled::Table;
 
 use crate::commands::ec2::EC2Command;
 use crate::errors::jaws_error::JawsError;
 use crate::matrix_handlers::t_matrix_output::{
-    Matrix, MatrixAggregateRowT, MatrixAggregateValue, MatrixFooter, MatrixHeader, MatrixOutput,
-    MatrixRowT, MatrixRowsT,
+    Matrix, MatrixAggregateValue, MatrixFooter, MatrixHeader, MatrixOutput, MatrixRowT, MatrixRowsT,
 };
 use crate::t_aws_handler::AWSHandler;
 use crate::t_command::Command;
-use crate::t_tabulatable::Tabulatable;
 use crate::textutils::Textutil;
 use crate::{Options, SubCommands};
 
@@ -94,15 +88,15 @@ impl ResCommand {
         let aggregate_rows = Some(vec![
             MatrixAggregateValue {
                 name: "Total Reservations".to_string(),
-                value: Box::new((total_res_count)),
+                value: Box::new(total_res_count),
             },
             MatrixAggregateValue {
                 name: "Total Yearly Spend".to_string(),
-                value: Box::new((format_money(total_res_expenditure_year))),
+                value: Box::new(format_money(total_res_expenditure_year)),
             },
             MatrixAggregateValue {
                 name: "Total Yearly Saving".to_string(),
-                value: Box::new((format_money(total_res_saving))),
+                value: Box::new(format_money(total_res_saving)),
             },
         ]);
 
@@ -233,25 +227,6 @@ impl Command for ResCommand {
     }
 }
 
-async fn output_table(
-    instances: Vec<String>,
-    title: &str,
-    options: &mut Options,
-    textutil: &Textutil,
-    ec2_command: &mut EC2Command,
-) {
-    // Output the uncovered instances, if there are any.
-    println!();
-    textutil.report_title(sprintf!(title, instances.len()).unwrap());
-
-    if instances.len() > 0 {
-        options.wide = true;
-        ec2_command.run_with_filter(instances, options).await;
-    } else {
-        println!("{}", textutil.center_text("** NONE **".to_string()));
-    }
-}
-
 fn thin_reservations(
     instances: &Vec<Instance>,
     reservations: &mut Vec<ReservedInstances>,
@@ -292,89 +267,12 @@ fn thin_reservations(
     (covered, uncovered)
 }
 
-fn dump_model_tabular(model: &CalculationModel) {
-    (model as &dyn Tabulatable).tabulate(false);
-}
-
-impl Tabulatable for CalculationModel {
-    fn get_table_headers(&self, _extended: bool) -> Vec<String> {
-        vec![
-            "Type".to_string(),
-            "#".to_string(),
-            "AZ".to_string(),
-            "Expiry".to_string(),
-            "Days".to_string(),
-            "Term Yrs".to_string(),
-            "Model".to_string(),
-            "$ Res / Hr".to_string(),
-            "$ Res Fixed".to_string(),
-            "$ Res Yearly".to_string(),
-            "$ ODM / Hr".to_string(),
-            "$ ODM Yearly".to_string(),
-            "$ Saving Yearly".to_string(),
-        ]
-    }
-
-    fn get_table_rows(&self, _extended: bool) -> Vec<Vec<String>> {
-        let mut rows: Vec<Vec<String>> = Vec::new();
-
-        for res in self.elements.iter().by_ref() {
-            let mut row: Vec<String> = Vec::new();
-            row.push(res.name.clone());
-            row.push(res.qty.to_string());
-            row.push(res.az.clone());
-            row.push(res.expiry.to_string());
-            row.push(res.days_remaining.to_string());
-            row.push(res.term_years.to_string());
-            row.push(res.res_model.clone());
-            row.push(format_money(res.res_recurring));
-            row.push(format_money(res.res_fixed));
-            row.push(format_money(res.res_yearly));
-            row.push(format_money(res.odm_rate));
-            row.push(format_money(res.odm_yearly));
-            row.push(format_money(res.saving_yearly));
-
-            rows.push(row);
-        }
-
-        // Totals
-        let empty: String = "".to_string();
-        let row = vec![
-            empty.clone(),
-            empty.clone(),
-            empty.clone(),
-            empty.clone(),
-            empty.clone(),
-            empty.clone(),
-            empty.clone(),
-            empty.clone(),
-            "Total".to_string(),
-            format_money(self.total_actual_yearly),
-            empty.clone(),
-            format_money(self.total_odm_yearly),
-            format_money(self.total_odm_yearly - self.total_actual_yearly),
-        ];
-
-        rows.push(vec![]);
-        rows.push(row);
-
-        rows
-    }
-
-    fn modify(&self, table: &mut Table) {
-        table.modify(Columns::single(1), Alignment::right());
-        table.modify(Columns::new(7..), Alignment::right());
-    }
-}
-
 struct CalculationModel {
     // Array of structs, one per reservation type
     // type, number, AZ (if tied), Expiry, Days Remaining, Term Years, Resv. Model, Recurring fee,
     // Resv. fixed fee, ODM Rate, Yearly ODM, Yearly Actual, Saving
     // Total Yearly ODM, total Actual, total saving.
     elements: Vec<ReservationElement>,
-    total_odm_yearly: f32,
-    total_actual_yearly: f32,
 }
 
 struct ReservationElement {
@@ -438,8 +336,6 @@ async fn calculate_model(
 
     CalculationModel {
         elements,
-        total_odm_yearly: total_odm_yearly,
-        total_actual_yearly: total_res_yearly,
     }
 }
 

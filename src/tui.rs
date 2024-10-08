@@ -10,13 +10,6 @@ pub fn tui_get_terminal_size() -> (usize, usize) {
     (width as usize, height as usize)
 }
 
-pub fn tui_to_hms(duration: u64) -> String {
-    let seconds = duration % 60;
-    let minutes = (duration / 60) % 60;
-    let hours = (duration / 60) / 60;
-    format!("{}h{}m{}s", hours, minutes, seconds)
-}
-
 pub fn tui_center_text(text: &String) -> String {
     let (width, _) = tui_get_terminal_size();
     format!("{: ^width$}", text, width = width)
@@ -24,7 +17,7 @@ pub fn tui_center_text(text: &String) -> String {
 
 
 pub fn tui_lcr_text(left: Option<String>, center: Option<String>, right: Option<String>) -> String {
-    let (mut width, _) = tui_get_terminal_size();
+    let (width, _) = tui_get_terminal_size();
 
     let effective_left = left.unwrap_or("".to_string());
     let effective_center = center.unwrap_or("".to_string());

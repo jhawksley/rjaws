@@ -17,7 +17,6 @@ pub const VERSION: &str = env!("CARGO_PKG_VERSION");
 mod t_aws_handler;
 mod commands;
 mod errors;
-mod t_tabulatable;
 mod textutils;
 mod e_output_format;
 mod t_command;
@@ -104,7 +103,7 @@ async fn main() {
     match command {
         Some(mut c) => {
             match c.run(&mut options).await {
-                Ok(ok) => {
+                Ok(_) => {
                     // Command ran to completion.  Check whether it requires Matrix Output
                     // to be decoded and output.
                     if let Some(matrix_output) = c.get_matrix_output() {

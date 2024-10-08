@@ -2,8 +2,6 @@ use aws_sdk_ec2::types::Instance;
 
 #[derive(Debug)]
 pub struct EC2Instance {
-    pub is_extended: bool,
-
     pub instance: Instance,
     pub ssm: Option<bool>,
     pub az: Option<String>,
@@ -33,56 +31,5 @@ impl EC2Instance {
         }
 
         None
-    }
-
-    pub fn values(&self, extended: bool) -> Vec<String> {
-        let mut vec: Vec<String> = Vec::new();
-        vec.push(self.instance.instance_id.as_ref().unwrap().clone());
-
-        let name = self.get_name();
-        vec.push(name);
-        vec.push(self.instance.state().as_ref().unwrap().name().unwrap().as_str().to_string());
-
-
-        // IP addresses may not be assigned
-        vec.push(
-            match &self.instance.public_ip_address {
-                Some(address) => address.to_string(),
-                None => "None".to_string()
-            }
-        );
-
-        vec.push(
-            match &self.instance.private_ip_address {
-                Some(address) => address.to_string(),
-                None => "None".to_string()
-            }
-        );
-
-        // If this is an extended/wide display, also push the extended fields.
-        if extended {
-            vec.push(match self.ssm {
-                Some(ssm) => if ssm { "Yes".to_string() } else { "No".to_string() },
-                None => "-".to_string()
-            });
-
-            vec.push(match &self.az {
-                Some(az) => az.to_string(),
-                None => "-".to_string()
-            });
-
-            vec.push(match &self.instance_type {
-                Some(it) => it.to_string(),
-                None => "-".to_string()
-            });
-
-            vec.push(match &self.spec {
-                Some(spec) => spec.to_string(),
-                None => "-".to_string()
-            });
-
-        }
-
-        vec
     }
 }

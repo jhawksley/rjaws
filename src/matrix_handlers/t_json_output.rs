@@ -4,7 +4,7 @@ use crate::matrix_handlers::t_matrix_output::MatrixOutput;
 pub struct JsonOutput;
 
 impl TrMatrixOutputHandler for JsonOutput {
-    fn output(&mut self, matrix_output: &MatrixOutput) {
+    fn output(&mut self, _: &MatrixOutput) {
         println!("DUMMY OUTPUT HANDLER -> Json")
     }
 }

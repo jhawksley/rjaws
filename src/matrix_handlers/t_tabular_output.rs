@@ -3,7 +3,6 @@ use crate::matrix_handlers::tr_matrix_output_handler::TrMatrixOutputHandler;
 use crate::textutils::get_terminal_size;
 use crate::tui::{tui_center_text, tui_lcr_text, tui_separator_bar};
 use chrono::Utc;
-use std::fmt::Display;
 use tabled::builder::Builder;
 use tabled::settings::object::Columns;
 use tabled::settings::peaker::PriorityMax;
@@ -111,7 +110,7 @@ impl TabularOutput {
                 let mut cells: Vec<String> = Vec::new();
                 for cell in row {
                     cells.push(match cell {
-                        Some(T) => T.to_string(),
+                        Some(t) => t.to_string(),
                         None => String::new(),
                     });
                 }
@@ -119,11 +118,11 @@ impl TabularOutput {
             }
 
             let mut table = builder.build();
-            let mut table = table
+            let table = table
                 .with(Style::rounded())
                 .with(term_size_settings.clone());
 
-            if (matrix.first_rows_header) {
+            if matrix.first_rows_header {
                 // table.modify(Rows::first(), Alignment::center());
                 // Experimental - try it out and see if it works
                 table.with(Style::rounded().remove_horizontals()).with(ColumnNames::default());
@@ -135,7 +134,7 @@ impl TabularOutput {
         }
     }
 
-    fn output_matrix_aggregate_table(&self, matrix: &Matrix, term_size_settings: &Settings<Settings<Settings, Wrap<usize, PriorityMax>>, MinWidth>) {
+    fn output_matrix_aggregate_table(&self, matrix: &Matrix, _term_size_settings: &Settings<Settings<Settings, Wrap<usize, PriorityMax>>, MinWidth>) {
         let mut builder = Builder::default();
 
         for row in matrix.aggregate_rows.as_ref().unwrap() {
