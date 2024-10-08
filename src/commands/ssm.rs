@@ -1,12 +1,15 @@
 use std::thread;
 use std::time::Instant;
-use async_trait::async_trait;
-use subprocess::PopenConfig;
-use signal_hook::{consts::SIGTSTP, consts::SIGINT, iterator::Signals};
 
-use crate::commands::{Command, notify, to_hms};
-use crate::errors::jaws_error::JawsError;
+use async_trait::async_trait;
+use signal_hook::{consts::SIGINT, consts::SIGTSTP, iterator::Signals};
+use subprocess::PopenConfig;
+
 use crate::{Options, SubCommands};
+use crate::errors::jaws_error::JawsError;
+use crate::t_command::Command;
+use crate::matrix_handlers::t_matrix_output::MatrixOutput;
+use crate::textutils::Textutil;
 
 pub struct SSMCommand {}
 
@@ -31,7 +34,7 @@ impl SSMCommand {
 #[async_trait]
 impl Command for SSMCommand {
     async fn run(&mut self, options: &mut Options) -> Result<(), JawsError> {
-
+        let textutil = Textutil::new(options);
         let mut instance = "Unknown";
 
 
@@ -39,7 +42,7 @@ impl Command for SSMCommand {
             instance = instance_id;
         }
 
-        notify(format!("Opening SSM session with {}\n", instance));
+        textutil.notify(format!("Opening SSM session with {}\n", instance));
 
         let start_time = Instant::now();
 
@@ -59,8 +62,12 @@ impl Command for SSMCommand {
 
         // Session is complete here
         let session_length = start_time.elapsed().as_secs();
-        notify(format!("Session closed, duration: {}\n", to_hms(session_length)));
+        textutil.notify(format!("Session closed, duration: {}\n", textutil.to_hms(session_length)));
 
         Ok(())
+    }
+
+    fn get_matrix_output(&mut self) -> Option<MatrixOutput> {
+        None
     }
 }

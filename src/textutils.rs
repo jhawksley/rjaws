@@ -5,17 +5,68 @@ use termion::clear::CurrentLine;
 use termion::color::{Blue, Fg};
 use termion::style;
 
+use crate::Options;
+
 const LINECOLOR: Fg<Blue> = Fg(Blue);
 
-pub fn txt_line_output(message: String) {
-    txt_line_clear();
-    print!("\r{}{}{}", LINECOLOR, message, style::Reset);
-    _ = stdout().flush();
+pub struct Textutil {
+    /// If true, causes output to be suppressed.
+    mute: bool,
 }
 
-pub fn txt_line_clear() {
-    print!("\r{}", CurrentLine);
-    _ = stdout().flush();
+impl Textutil {
+    pub(crate) fn new(options: &Options) -> Textutil {
+        Self {
+            mute: !options.output_format.unwrap().supports_free_text_output()
+        }
+    }
+
+
+    pub fn txt_line_output(&self, message: String) {
+        self.txt_line_clear();
+        if !self.mute {
+            print!("\r{}{}{}", LINECOLOR, message, style::Reset);
+            _ = stdout().flush();
+        }
+    }
+
+
+    pub fn txt_line_clear(&self) {
+        if !self.mute {
+            print!("\r{}", CurrentLine);
+            _ = stdout().flush();
+        }
+    }
+
+    // ---------------------------------------------------------------------------------------------
+    // This is the moved version of the Command mod output driver
+
+    pub fn notify_comms(&self, action: Option<String>) {
+        match action {
+            Some(action) => self.txt_line_output(format!("Talking to AWS ({})...", action)),
+            None => self.txt_line_output("Talking to AWS...".to_string())
+        }
+    }
+
+
+    pub fn notify(&self, string: String) {
+        self.txt_line_output(string);
+    }
+
+    pub fn notify_working(&self) {
+        self.txt_line_output("Marshalling data...".to_string());
+    }
+
+    pub fn notify_clear(&self) {
+        self.txt_line_clear();
+    }
+
+    pub fn to_hms(&self, duration: u64) -> String {
+        let seconds = duration % 60;
+        let minutes = (duration / 60) % 60;
+        let hours = (duration / 60) / 60;
+        format!("{}h{}m{}s", hours, minutes, seconds)
+    }
 }
 
 pub fn get_terminal_size() -> (usize, usize) {
@@ -25,16 +76,4 @@ pub fn get_terminal_size() -> (usize, usize) {
         terminal_size().unwrap_or((Width(120), Height(30)));
 
     (width as usize, height as usize)
-}
-
-
-pub fn report_title(title: String) {
-    println!("{}", center_text(format!("J A W S - {}", crate::VERSION)));
-    println!("{}\n", center_text(title));
-}
-
-pub fn center_text(text: String) -> String {
-    let (width, _) = get_terminal_size();
-
-    format!("{: ^width$}", text, width = width)
 }

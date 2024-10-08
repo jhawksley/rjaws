@@ -13,39 +13,49 @@ use aws_sdk_sts;
 use aws_sdk_sts::operation::get_caller_identity::GetCallerIdentityOutput;
 use serde_json::Value;
 
-use crate::commands::notify_comms;
+use crate::{handle_and_panic, Options};
 use crate::errors::jaws_error::JawsError;
-use crate::Options;
+use crate::textutils::Textutil;
 
 const TYPE_BATCH_SIZE: i32 = 100;
 
+/// This type contains low-level functionality for handling AWS calls.  Several datasets
+/// are cached, therefore clients should prefer to reuse this type, rather than reinstantiating
+/// it.
 pub struct AWSHandler {
     instance_profile_cache: HashMap<String, InstanceProfile>,
     instance_profile_ssm_mapping_cache: HashMap<String, bool>,
     specmap: HashMap<String, String>,
     odm_rate_cache: HashMap<InstanceType, f32>,
     region: Option<String>,
+    textutil: Textutil,
 }
 
-
-impl Default for AWSHandler {
-    fn default() -> Self {
-        Self {
-            instance_profile_cache: HashMap::new(),
-            instance_profile_ssm_mapping_cache: HashMap::new(),
-            odm_rate_cache: HashMap::new(),
-            specmap: HashMap::new(),
-            region: None,
-        }
-    }
-}
 
 impl AWSHandler {
     /// Get a new handler, primed with any optional elements.
+    /// If it is not possible to construct a valid config, this function aborts as a diverging function.
     pub async fn new(options: &Options) -> Self {
-        let mut handler = AWSHandler::default();
+        let mut handler = AWSHandler {
+            instance_profile_cache: HashMap::new(),
+            instance_profile_ssm_mapping_cache: HashMap::new(),
+            specmap: HashMap::new(),
+            odm_rate_cache: HashMap::new(),
+            region: None,
+            textutil: Textutil::new(options),
+        };
+        // Load the region from options, if Some.  If None, load using AWS defaulting.
         handler.region = match &options.region {
-            None => Some(aws_config::load_defaults(BehaviorVersion::latest()).await.region().unwrap().to_string()),
+            None => {
+                let sdk_config = aws_config::load_defaults(BehaviorVersion::latest()).await;
+
+                match sdk_config.region() {
+                    None => { handle_and_panic(JawsError::new("No AWS region could be calculated from your configuration.\n\nEnsure AWS_REGION and/or AWS_PROFILE are set.".to_string())) },
+                    Some(region) => {
+                        Some(region.to_string())
+                    }
+                }
+            }
             Some(region) => Some(region.to_string()),
         };
 
@@ -67,8 +77,17 @@ impl AWSHandler {
 
         match res {
             Ok(output) => Ok(output),
-            Err(e) => Err(JawsError::new(format!("Ensure your AWS credentials are set correctly in the environment.\n\nThe underlying error is:\n\t{:?}",
-                                                 e.into_service_error().message().unwrap())))
+            Err(e) => {
+                // let service_error = e.into_service_error();
+                // let s = service_error.message();
+                //
+                // let message = match s {
+                //     None => { "No message returned from SDK" }
+                //     Some(_) => { s.unwrap() }
+                // };
+
+                Err(JawsError::new(format!("Ensure your AWS credentials are set correctly in the environment.\n\nThe underlying error is:\n\t{:?}", e.into_service_error().message().unwrap_or("No message returned from SDK."))))
+            }
         }
     }
 
@@ -102,7 +121,7 @@ impl AWSHandler {
             aws_sdk_iam::Client::new(&aws_config::load_defaults(BehaviorVersion::latest()).await);
 
         if self.instance_profile_cache.len() == 0 {
-            notify_comms(Some("filling Instance Profile cache".to_string()));
+            self.textutil.notify_comms(Some("filling Instance Profile cache".to_string()));
             for ip in client
                 .list_instance_profiles()
                 .send()
@@ -132,7 +151,7 @@ impl AWSHandler {
         // no...
 
         // Check whether the instance has policy AmazonSSMManagedInstanceCore in its role
-        notify_comms(Some(format!(
+        self.textutil.notify_comms(Some(format!(
             "getting IAM role information {:?}",
             instance.iam_instance_profile().unwrap().id().unwrap()
         )));
@@ -201,7 +220,7 @@ impl AWSHandler {
         // Get the on-demand rate for a given instance type.
 
         // Check if it's already in the cache
-        if ! self.odm_rate_cache.contains_key(instance_type) {
+        if !self.odm_rate_cache.contains_key(instance_type) {
 
             // Get the on-demand rate and cache it, then return it
             // AWS Pricing is not available everywhere - we use eu-central-1 to access it.
@@ -305,7 +324,7 @@ impl AWSHandler {
         let mut loaded: usize = 0;
 
         loop {
-            notify_comms(Some(
+            self.textutil.notify_comms(Some(
                 format!("getting instance types [{}]", loaded).to_string(),
             ));
 
